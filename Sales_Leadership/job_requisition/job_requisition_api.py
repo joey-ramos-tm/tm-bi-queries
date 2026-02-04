@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
-from sql_connection import connect_to_bronze
+from sql_connection import connect_to_datalake
 import traceback
 from datetime import datetime, timedelta
 from functools import lru_cache
@@ -47,7 +47,7 @@ def fetch_all_data():
     data = {}
 
     try:
-        conn = connect_to_bronze()
+        conn = connect_to_datalake()
         cursor = conn.cursor()
 
         # Query 1: Summary Statistics
