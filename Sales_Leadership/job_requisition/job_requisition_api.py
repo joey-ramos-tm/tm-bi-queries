@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
-from sql_connection import connect_to_datalake
+from sql_connection import connect_to_bronze
 import traceback
 from datetime import datetime, timedelta
 from functools import lru_cache
@@ -47,7 +47,7 @@ def fetch_all_data():
     data = {}
 
     try:
-        conn = connect_to_datalake()
+        conn = connect_to_bronze()
         cursor = conn.cursor()
 
         # Query 1: Summary Statistics
@@ -60,7 +60,7 @@ def fetch_all_data():
                 AVG(DATEDIFF(DAY, TRY_CAST(Recruiting_Start_Date AS DATE), GETDATE())) AS Avg_Days_Open,
                 MAX(DATEDIFF(DAY, TRY_CAST(Recruiting_Start_Date AS DATE), GETDATE())) AS Max_Days_Open,
                 COUNT(*) AS Total_Positions
-            FROM [TaylorMorrisonDataLake].[WorkDay].[Get_Job_Requisition]
+            FROM [TaylorMorrisonDWH_Bronze].[WorkDay].[Get_Job_Requisition]
             WHERE JSON_VALUE(Job_Requisition_Status_Reference, '$[1]."#text"') LIKE '%Open%'
         """)
 
@@ -93,7 +93,7 @@ def fetch_all_data():
                         THEN '61-90 Days'
                         ELSE '90+ Days'
                     END AS Age_Category
-                FROM [TaylorMorrisonDataLake].[WorkDay].[Get_Job_Requisition]
+                FROM [TaylorMorrisonDWH_Bronze].[WorkDay].[Get_Job_Requisition]
                 WHERE JSON_VALUE(Job_Requisition_Status_Reference, '$[1]."#text"') LIKE '%Open%'
             ) AS AgeData
             GROUP BY Age_Category
@@ -116,7 +116,7 @@ def fetch_all_data():
                 JSON_VALUE(Supervisory_Organization_Reference, '$[1]."#text"') AS Department,
                 COUNT(*) AS Open_Count,
                 AVG(DATEDIFF(DAY, TRY_CAST(Recruiting_Start_Date AS DATE), GETDATE())) AS Avg_Days_Open
-            FROM [TaylorMorrisonDataLake].[WorkDay].[Get_Job_Requisition]
+            FROM [TaylorMorrisonDWH_Bronze].[WorkDay].[Get_Job_Requisition]
             WHERE JSON_VALUE(Job_Requisition_Status_Reference, '$[1]."#text"') LIKE '%Open%'
                 AND JSON_VALUE(Supervisory_Organization_Reference, '$[1]."#text"') IS NOT NULL
             GROUP BY JSON_VALUE(Supervisory_Organization_Reference, '$[1]."#text"')
@@ -139,7 +139,7 @@ def fetch_all_data():
                 JSON_VALUE(Primary_Location_Reference, '$[1]."#text"') AS Location,
                 COUNT(*) AS Open_Count,
                 AVG(DATEDIFF(DAY, TRY_CAST(Recruiting_Start_Date AS DATE), GETDATE())) AS Avg_Days_Open
-            FROM [TaylorMorrisonDataLake].[WorkDay].[Get_Job_Requisition]
+            FROM [TaylorMorrisonDWH_Bronze].[WorkDay].[Get_Job_Requisition]
             WHERE JSON_VALUE(Job_Requisition_Status_Reference, '$[1]."#text"') LIKE '%Open%'
                 AND JSON_VALUE(Primary_Location_Reference, '$[1]."#text"') IS NOT NULL
             GROUP BY JSON_VALUE(Primary_Location_Reference, '$[1]."#text"')
@@ -161,7 +161,7 @@ def fetch_all_data():
             SELECT
                 JSON_VALUE(RequisitionReason, '$[1]."#text"') AS Reason,
                 COUNT(*) AS Count
-            FROM [TaylorMorrisonDataLake].[WorkDay].[Get_Job_Requisition]
+            FROM [TaylorMorrisonDWH_Bronze].[WorkDay].[Get_Job_Requisition]
             WHERE JSON_VALUE(Job_Requisition_Status_Reference, '$[1]."#text"') LIKE '%Open%'
                 AND JSON_VALUE(RequisitionReason, '$[1]."#text"') IS NOT NULL
             GROUP BY JSON_VALUE(RequisitionReason, '$[1]."#text"')
@@ -187,7 +187,7 @@ def fetch_all_data():
                          THEN 1 ELSE 0 END) AS Filled,
                 SUM(CASE WHEN JSON_VALUE(Job_Requisition_Status_Reference, '$[1]."#text"') LIKE '%Open%'
                          THEN 1 ELSE 0 END) AS Still_Open
-            FROM [TaylorMorrisonDataLake].[WorkDay].[Get_Job_Requisition]
+            FROM [TaylorMorrisonDWH_Bronze].[WorkDay].[Get_Job_Requisition]
             WHERE TRY_CAST(Recruiting_Start_Date AS DATE) >= DATEADD(MONTH, -12, GETDATE())
             GROUP BY FORMAT(TRY_CAST(Recruiting_Start_Date AS DATE), 'yyyy-MM')
             ORDER BY Month
@@ -213,7 +213,7 @@ def fetch_all_data():
                 JSON_VALUE(Primary_Location_Reference, '$[1]."#text"') AS Location,
                 TRY_CAST(Recruiting_Start_Date AS DATE) AS Start_Date,
                 DATEDIFF(DAY, TRY_CAST(Recruiting_Start_Date AS DATE), GETDATE()) AS Days_Open
-            FROM [TaylorMorrisonDataLake].[WorkDay].[Get_Job_Requisition]
+            FROM [TaylorMorrisonDWH_Bronze].[WorkDay].[Get_Job_Requisition]
             WHERE JSON_VALUE(Job_Requisition_Status_Reference, '$[1]."#text"') LIKE '%Open%'
                 AND DATEDIFF(DAY, TRY_CAST(Recruiting_Start_Date AS DATE), GETDATE()) > 90
             ORDER BY Days_Open DESC
