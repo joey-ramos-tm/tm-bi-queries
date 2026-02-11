@@ -61,6 +61,50 @@ def connect_to_silver():
     database = os.getenv('SQL_DATABASE_SILVER')
     return connect_to_sql_server(database)
 
+
+def connect_to_sandbox():
+    """Connect to sandbox_BI database"""
+    return connect_to_sql_server('sandbox_BI')
+
+
+def connect_to_bronze():
+    """Connect to TaylorMorrisonDWH_Bronze database"""
+    return connect_to_sql_server('TaylorMorrisonDWH_Bronze')
+
+
+def connect_to_datalake():
+    """Connect to TaylorMorrisonDataLake database on SQLDL1.TWC.PVT"""
+    load_dotenv()
+
+    # Get DataLake-specific server and database
+    server = os.getenv('SQL_SERVER_DATALAKE', 'SQLDL1.TWC.PVT')
+    database = os.getenv('SQL_DATABASE_DATALAKE', 'TaylorMorrisonDataLake')
+    driver = os.getenv('SQL_DRIVER', 'ODBC Driver 17 for SQL Server')
+
+    # Validate that all required credentials are present
+    if not all([server, database]):
+        raise ValueError("Missing required DataLake database credentials in .env file")
+
+    # Build connection string using Windows Authentication
+    connection_string = (
+        f'DRIVER={{{driver}}};'
+        f'SERVER={server};'
+        f'DATABASE={database};'
+        f'Trusted_Connection=yes;'
+        f'Connection Timeout=30;'
+    )
+
+    try:
+        # Establish connection
+        connection = pyodbc.connect(connection_string)
+        print(f"Successfully connected to {database} on {server}")
+        return connection
+
+    except pyodbc.Error as e:
+        print(f"Error connecting to DataLake: {e}")
+        raise
+
+
 def main():
     """
     Main function to demonstrate database connection and query execution
@@ -84,6 +128,15 @@ def main():
         print(f"Connected to: {row.current_database}")
         cursor_silver.close()
         conn_silver.close()
+
+        print("\n=== Connecting to DataLake Database ===")
+        conn_datalake = connect_to_datalake()
+        cursor_datalake = conn_datalake.cursor()
+        cursor_datalake.execute("SELECT DB_NAME() AS current_database")
+        row = cursor_datalake.fetchone()
+        print(f"Connected to: {row.current_database}")
+        cursor_datalake.close()
+        conn_datalake.close()
 
         print("\nAll connections successful and closed")
 
