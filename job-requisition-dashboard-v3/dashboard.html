@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Requisition Dashboard | Taylor Morrison</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        * {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        :root {
+            --tm-burgundy: #A6192E;
+            --tm-dark-blue: #1E293B;
+            --tm-navy: #0F172A;
+        }
+
+        body {
+            background: #F8FAFC;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #1E293B 0%, #0F172A 100%);
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.04);
+        }
+
+        .stat-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+        }
+
+        .grid {
+            min-height: 0;
+        }
+
+        .chart-card > div {
+            will-change: auto;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: rgba(255, 255, 255, 0.7);
+            border-radius: 8px;
+            margin: 4px 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: var(--tm-burgundy);
+            color: white;
+        }
+
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-red {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .badge-amber {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .badge-green {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 12px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0F172A;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #64748B;
+        }
+
+        .trend-up {
+            color: #10B981;
+        }
+
+        .trend-down {
+            color: #EF4444;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--tm-burgundy) 0%, #D91A3D 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <div class="sidebar w-64 flex-shrink-0 flex flex-col">
+            <!-- Logo -->
+            <div class="p-6 border-b border-white/10">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: var(--tm-burgundy);">
+                        <span class="text-white font-bold text-lg">TM</span>
+                    </div>
+                    <div>
+                        <h1 class="text-white font-bold text-base">Taylor Morrison</h1>
+                        <p class="text-white/60 text-xs">Job Requisition</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 py-6">
+                <a href="dashboard.html" class="nav-item active">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="requisitions.html" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                    </svg>
+                    Open Requisitions
+                </a>
+                <a href="filled-dashboard.html" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Filled Requisitions
+                </a>
+                <a href="candidate-stage.html" class="nav-item">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    Candidate Stage
+                </a>
+            </nav>
+
+            <!-- User Profile -->
+            <div class="p-4 border-t border-white/10">
+                <div class="flex items-center space-x-3 px-2">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                        JR
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-white text-sm font-medium">Admin User</p>
+                        <p class="text-white/60 text-xs">admin@tm.com</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content" class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <div class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">Analytics Overview</h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Real-time insights into job requisitions</p>
+                </div>
+                <div class="flex flex-col items-end space-y-2">
+                    <div class="flex items-center space-x-3">
+                        <button onclick="refreshData()" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center space-x-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            <span>Refresh</span>
+                        </button>
+                        <button onclick="exportToPDF()" class="px-3 py-1.5 text-white rounded-lg text-xs font-medium transition-colors flex items-center space-x-1.5 hover:opacity-90" style="background: var(--tm-burgundy);">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <span>Export</span>
+                        </button>
+                    </div>
+                    <div class="text-xs text-gray-500">
+                        Data refreshed: <span id="dataRefreshTimestamp" class="font-medium text-gray-700">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+                    <!-- Total Open Card -->
+                    <div class="stat-card p-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="stat-label">Total Open</p>
+                                <h3 class="stat-value mt-2" id="totalOpen">--</h3>
+                                <p class="text-xs text-gray-500 mt-2 flex items-center">
+                                    <span class="trend-up mr-1">↑ 8.2%</span>
+                                    <span>vs last month</span>
+                                </p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(166, 25, 46, 0.1);">
+                                <svg class="w-5 h-5" style="color: var(--tm-burgundy);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Departments Card -->
+                    <div class="stat-card p-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="stat-label">Departments</p>
+                                <h3 class="stat-value mt-2" id="departments">--</h3>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    With openings
+                                </p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(59, 130, 246, 0.1);">
+                                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Locations Card -->
+                    <div class="stat-card p-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="stat-label">Locations</p>
+                                <h3 class="stat-value mt-2" id="locations">--</h3>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Hiring now
+                                </p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(16, 185, 129, 0.1);">
+                                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Avg Days Card -->
+                    <div class="stat-card p-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="stat-label">Avg Days Open</p>
+                                <h3 class="stat-value mt-2" id="avgDays">--</h3>
+                                <p class="text-xs text-gray-500 mt-2" id="maxDays">
+                                    Max: -- days
+                                </p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(245, 158, 11, 0.1);">
+                                <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filled Last 90 Days Card -->
+                    <div class="stat-card p-4">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="stat-label">Filled (90 Days)</p>
+                                <h3 class="stat-value mt-2" id="filledLast30Days">--</h3>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Recently filled
+                                </p>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(16, 185, 129, 0.1);">
+                                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row 1 -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                    <!-- Aging Analysis -->
+                    <div class="chart-card p-4 lg:col-span-2">
+                        <h3 class="section-title mb-3">Requisition Aging</h3>
+                        <div style="height: 180px; position: relative;">
+                            <canvas id="agingChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Donut Chart -->
+                    <div class="chart-card p-4">
+                        <h3 class="section-title mb-3">Top Areas</h3>
+                        <div style="height: 180px; position: relative;">
+                            <canvas id="reasonChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row 2 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                    <!-- Divisions -->
+                    <div class="chart-card p-4">
+                        <h3 class="section-title mb-3">Top Divisions</h3>
+                        <div style="height: 400px; position: relative;">
+                            <canvas id="departmentChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Departments (Job Family Groups) -->
+                    <div class="chart-card p-4">
+                        <h3 class="section-title mb-3">Top Departments</h3>
+                        <div style="height: 400px; position: relative;">
+                            <canvas id="locationChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trend and Activity -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+                    <!-- Trend Chart -->
+                    <div class="chart-card p-4 lg:col-span-2">
+                        <h3 class="section-title mb-3">12-Month Trends</h3>
+                        <div style="height: 180px; position: relative;">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="chart-card p-4">
+                        <h3 class="section-title mb-3">Recent Activity</h3>
+                        <div id="activityFeed" class="space-y-0">
+                            <div class="activity-item">
+                                <div class="avatar">SR</div>
+                                <div class="flex-1 ml-3">
+                                    <p class="text-sm font-medium text-gray-900">Sales Rep Position</p>
+                                    <p class="text-xs text-gray-500">Opened 2 hours ago</p>
+                                </div>
+                                <span class="badge badge-green">New</span>
+                            </div>
+                            <div class="activity-item">
+                                <div class="avatar">PM</div>
+                                <div class="flex-1 ml-3">
+                                    <p class="text-sm font-medium text-gray-900">Project Manager</p>
+                                    <p class="text-xs text-gray-500">Filled yesterday</p>
+                                </div>
+                                <span class="badge badge-amber">Filled</span>
+                            </div>
+                            <div class="activity-item">
+                                <div class="avatar">SE</div>
+                                <div class="flex-1 ml-3">
+                                    <p class="text-sm font-medium text-gray-900">Sales Executive</p>
+                                    <p class="text-xs text-gray-500">Critical: 120 days</p>
+                                </div>
+                                <span class="badge badge-red">Critical</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Critical Requisitions Table -->
+                <div class="chart-card p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="section-title mb-0">Critical Requisitions</h3>
+                        <a href="requisitions.html" class="text-sm font-medium" style="color: var(--tm-burgundy);">View all →</a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full" id="criticalTable">
+                            <thead>
+                                <tr class="border-b border-gray-100">
+                                    <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Requisition</th>
+                                    <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Position</th>
+                                    <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Department</th>
+                                    <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Division</th>
+                                    <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Area</th>
+                                    <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Location</th>
+                                    <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Start Date</th>
+                                    <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Target Hire</th>
+                                    <th class="pb-2 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Days Open</th>
+                                </tr>
+                            </thead>
+                            <tbody id="criticalTableBody">
+                                <tr>
+                                    <td colspan="9" class="py-4 text-center text-gray-500 text-sm">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8081/api';
+        let charts = {};
+        let activeFilters = {
+            area: null,
+            division: null,
+            department: null
+        };
+
+        function formatNumber(num) {
+            return num.toLocaleString('en-US');
+        }
+
+        function showFilterBanner() {
+            console.log('showFilterBanner called, activeFilters:', activeFilters);
+            const existingBanner = document.getElementById('filterBanner');
+            if (existingBanner) existingBanner.remove();
+
+            const activeFilterText = [];
+            if (activeFilters.area) activeFilterText.push(`Area: ${activeFilters.area}`);
+            if (activeFilters.division) activeFilterText.push(`Division: ${activeFilters.division}`);
+            if (activeFilters.department) activeFilterText.push(`Department: ${activeFilters.department}`);
+
+            console.log('activeFilterText:', activeFilterText);
+            if (activeFilterText.length === 0) {
+                console.log('No active filters, returning');
+                return;
+            }
+
+            const banner = document.createElement('div');
+            banner.id = 'filterBanner';
+            banner.className = 'bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 flex items-center justify-between';
+            banner.innerHTML = `
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-blue-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                    <span class="text-sm font-medium text-blue-700">Filtered by: ${activeFilterText.join(' | ')}</span>
+                </div>
+                <button onclick="clearFilters()" class="text-sm font-medium text-blue-600 hover:text-blue-800">Clear Filter</button>
+            `;
+
+            const container = document.querySelector('.flex-1.overflow-y-auto.p-4');
+            if (container) {
+                container.insertBefore(banner, container.firstChild);
+            } else {
+                console.error('Could not find container for filter banner');
+            }
+        }
+
+        function clearFilters() {
+            activeFilters = {
+                area: null,
+                division: null,
+                department: null
+            };
+            const banner = document.getElementById('filterBanner');
+            if (banner) banner.remove();
+            refreshData();
+        }
+
+        function buildFilterParams() {
+            console.log('Building filter params, activeFilters:', activeFilters);
+            const params = new URLSearchParams();
+            if (activeFilters.area) params.append('area', activeFilters.area);
+            if (activeFilters.division) params.append('division', activeFilters.division);
+            if (activeFilters.department) params.append('department', activeFilters.department);
+            const result = params.toString() ? `?${params.toString()}` : '';
+            console.log('Filter params result:', result);
+            return result;
+        }
+
+        async function loadSummary() {
+            try {
+                const response = await fetch(`${API_BASE}/analytics/summary${buildFilterParams()}`);
+                const data = await response.json();
+
+                document.getElementById('totalOpen').textContent = formatNumber(data.total_open);
+                document.getElementById('departments').textContent = data.departments;
+                document.getElementById('locations').textContent = data.locations;
+                document.getElementById('avgDays').textContent = data.avg_days_open.toFixed(1);
+                document.getElementById('maxDays').textContent = `Max: ${data.max_days_open} days`;
+                document.getElementById('filledLast30Days').textContent = formatNumber(data.filled_last_90_days);
+            } catch (error) {
+                console.error('Error loading summary:', error);
+            }
+        }
+
+        async function loadAgingChart() {
+            try {
+                const response = await fetch(`${API_BASE}/analytics/aging${buildFilterParams()}`);
+                const data = await response.json();
+
+                const ctx = document.getElementById('agingChart').getContext('2d');
+                if (charts.aging) charts.aging.destroy();
+
+                charts.aging = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.map(d => d.category),
+                        datasets: [{
+                            label: 'Requisitions',
+                            data: data.map(d => d.count),
+                            backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#991B1B'],
+                            borderRadius: 8,
+                            barThickness: 40
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: {
+                            legend: { display: false },
+                            datalabels: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#F1F5F9' }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading aging chart:', error);
+            }
+        }
+
+        async function loadReasonChart() {
+            try {
+                const response = await fetch(`${API_BASE}/analytics/reasons${buildFilterParams()}`);
+                const data = await response.json();
+
+                const ctx = document.getElementById('reasonChart').getContext('2d');
+                if (charts.reason) charts.reason.destroy();
+
+                const topReasons = data.slice(0, 5);
+
+                charts.reason = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: topReasons.map(d => d.reason.length > 20 ? d.reason.substring(0, 20) + '...' : d.reason),
+                        datasets: [{
+                            data: topReasons.map(d => d.count),
+                            backgroundColor: ['#A6192E', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        onClick: (event, activeElements) => {
+                            console.log('Top Areas clicked', activeElements);
+                            if (activeElements.length > 0) {
+                                const index = activeElements[0].index;
+                                const selectedArea = topReasons[index].reason;
+                                console.log('Selected area:', selectedArea);
+                                activeFilters.area = selectedArea;
+                                activeFilters.division = null;
+                                activeFilters.department = null;
+                                showFilterBanner();
+                                refreshData();
+                            }
+                        },
+                        onHover: (event, activeElements) => {
+                            event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 10,
+                                    font: { size: 11 }
+                                }
+                            },
+                            datalabels: {
+                                color: '#fff',
+                                font: {
+                                    weight: 'bold',
+                                    size: 14
+                                },
+                                formatter: (value, ctx) => {
+                                    return value;
+                                },
+                                listeners: {
+                                    click: false
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading reason chart:', error);
+            }
+        }
+
+        async function loadDepartmentChart() {
+            try {
+                const response = await fetch(`${API_BASE}/analytics/departments${buildFilterParams()}`);
+                const data = await response.json();
+
+                const ctx = document.getElementById('departmentChart').getContext('2d');
+                if (charts.department) charts.department.destroy();
+
+                charts.department = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.map(d => d.department.length > 30 ? d.department.substring(0, 30) + '...' : d.department),
+                        datasets: [{
+                            label: 'Open Positions',
+                            data: data.map(d => d.count),
+                            backgroundColor: '#A6192E',
+                            borderRadius: 6,
+                            barThickness: 10
+                        }, {
+                            label: 'Filled (90 Days)',
+                            data: data.map(d => d.filled_last_90_days),
+                            backgroundColor: '#10B981',
+                            borderRadius: 6,
+                            barThickness: 10
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        onClick: (event, activeElements) => {
+                            console.log('Top Divisions clicked', activeElements);
+                            if (activeElements.length > 0) {
+                                const index = activeElements[0].index;
+                                const selectedDivision = data[index].department;
+                                console.log('Selected division:', selectedDivision);
+                                activeFilters.division = selectedDivision;
+                                activeFilters.area = null;
+                                activeFilters.department = null;
+                                showFilterBanner();
+                                refreshData();
+                            }
+                        },
+                        onHover: (event, activeElements) => {
+                            event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    font: { size: 11 },
+                                    padding: 10,
+                                    usePointStyle: true
+                                }
+                            },
+                            datalabels: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                grid: { color: '#F1F5F9' }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { font: { size: 11 } }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading department chart:', error);
+            }
+        }
+
+        async function loadLocationChart() {
+            try {
+                const response = await fetch(`${API_BASE}/analytics/locations${buildFilterParams()}`);
+                const data = await response.json();
+
+                const ctx = document.getElementById('locationChart').getContext('2d');
+                if (charts.location) charts.location.destroy();
+
+                charts.location = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.map(d => d.location.length > 30 ? d.location.substring(0, 30) + '...' : d.location),
+                        datasets: [{
+                            label: 'Open Positions',
+                            data: data.map(d => d.count),
+                            backgroundColor: '#3B82F6',
+                            borderRadius: 6,
+                            barThickness: 10
+                        }, {
+                            label: 'Filled (90 Days)',
+                            data: data.map(d => d.filled_last_90_days),
+                            backgroundColor: '#10B981',
+                            borderRadius: 6,
+                            barThickness: 10
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        onClick: (event, activeElements) => {
+                            console.log('Top Departments clicked', activeElements);
+                            if (activeElements.length > 0) {
+                                const index = activeElements[0].index;
+                                const selectedDepartment = data[index].location;
+                                console.log('Selected department:', selectedDepartment);
+                                activeFilters.department = selectedDepartment;
+                                activeFilters.area = null;
+                                activeFilters.division = null;
+                                showFilterBanner();
+                                refreshData();
+                            }
+                        },
+                        onHover: (event, activeElements) => {
+                            event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    font: { size: 11 },
+                                    padding: 10,
+                                    usePointStyle: true
+                                }
+                            },
+                            datalabels: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                grid: { color: '#F1F5F9' }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { font: { size: 11 } }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading location chart:', error);
+            }
+        }
+
+        async function loadTrendChart() {
+            try {
+                const response = await fetch(`${API_BASE}/analytics/trends${buildFilterParams()}`);
+                const data = await response.json();
+
+                const ctx = document.getElementById('trendChart').getContext('2d');
+                if (charts.trend) charts.trend.destroy();
+
+                charts.trend = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => d.month),
+                        datasets: [
+                            {
+                                label: 'Created',
+                                data: data.map(d => d.created),
+                                borderColor: '#3B82F6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Filled',
+                                data: data.map(d => d.filled),
+                                borderColor: '#10B981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2
+                            },
+                            {
+                                label: 'Still Open',
+                                data: data.map(d => d.still_open),
+                                borderColor: '#EF4444',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                tension: 0.4,
+                                fill: true,
+                                borderWidth: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                align: 'end',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15,
+                                    font: { size: 12 }
+                                }
+                            },
+                            datalabels: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#F1F5F9' }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading trend chart:', error);
+            }
+        }
+
+        async function loadCriticalTable() {
+            try {
+                const response = await fetch(`${API_BASE}/analytics/critical${buildFilterParams()}`);
+                const data = await response.json();
+
+                const tbody = document.getElementById('criticalTableBody');
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="py-4 text-center text-gray-500 text-sm">No critical requisitions found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.slice(0, 5).map(req => `
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="py-2 text-sm font-medium text-gray-900">${req.requisition}</td>
+                        <td class="py-2 text-sm text-gray-900">${req.job_title}</td>
+                        <td class="py-2 text-sm text-gray-600">${req.department}</td>
+                        <td class="py-2 text-sm text-gray-600">${req.division || 'N/A'}</td>
+                        <td class="py-2 text-sm text-gray-600">${req.area || 'N/A'}</td>
+                        <td class="py-2 text-sm text-gray-600">${req.location}</td>
+                        <td class="py-2 text-sm text-gray-600">${req.start_date}</td>
+                        <td class="py-2 text-sm text-gray-600">${req.target_hire_date || 'N/A'}</td>
+                        <td class="py-2 text-sm text-right">
+                            <span class="badge badge-red">${req.days_open} days</span>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading critical table:', error);
+            }
+        }
+
+        function exportToPDF() {
+            // Get the main content area (excluding sidebar)
+            const element = document.getElementById('main-content');
+
+            // Show a loading message
+            const originalButtonText = event.target.closest('button').innerHTML;
+            event.target.closest('button').innerHTML = '<svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span class="ml-1.5">Exporting...</span>';
+
+            const opt = {
+                margin: [0.5, 0.5, 0.5, 0.5],
+                filename: `Job_Requisition_Dashboard_${new Date().toISOString().split('T')[0]}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#F8FAFC'
+                },
+                jsPDF: {
+                    unit: 'in',
+                    format: 'letter',
+                    orientation: 'landscape'
+                }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Restore button text
+                event.target.closest('button').innerHTML = originalButtonText;
+            }).catch((error) => {
+                console.error('Error generating PDF:', error);
+                event.target.closest('button').innerHTML = originalButtonText;
+                alert('Error generating PDF. Please try again.');
+            });
+        }
+
+        async function loadRefreshTimestamp() {
+            try {
+                const response = await fetch(`${API_BASE}/analytics/refresh-timestamp`);
+                const data = await response.json();
+
+                if (data.refresh_timestamp) {
+                    const date = new Date(data.refresh_timestamp);
+                    const formatted = date.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                    document.getElementById('dataRefreshTimestamp').textContent = formatted + ' AZ';
+                } else {
+                    document.getElementById('dataRefreshTimestamp').textContent = 'Unknown';
+                }
+            } catch (error) {
+                console.error('Error loading refresh timestamp:', error);
+                document.getElementById('dataRefreshTimestamp').textContent = 'Error';
+            }
+        }
+
+        function refreshData() {
+            loadSummary();
+            loadAgingChart();
+            loadReasonChart();
+            loadDepartmentChart();
+            loadLocationChart();
+            loadTrendChart();
+            loadCriticalTable();
+            loadRefreshTimestamp();
+        }
+
+        window.addEventListener('load', refreshData);
+    </script>
+</body>
+</html>

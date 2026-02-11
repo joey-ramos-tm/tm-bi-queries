@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filled Requisitions Dashboard - Last 13 Months</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1E293B;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1E293B;
+            margin-bottom: 1rem;
+        }
+
+        .filter-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: #FEF3C7;
+            border: 1px solid #FCD34D;
+            color: #92400E;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .filter-badge button {
+            margin-left: 0.5rem;
+            color: #92400E;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .filter-badge button:hover {
+            opacity: 1;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #1E293B 0%, #0F172A 100%);
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: rgba(255, 255, 255, 0.7);
+            border-radius: 8px;
+            margin: 4px 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: #A6192E;
+            color: white;
+        }
+
+        .nav-item svg {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        th {
+            background: #F8FAFC;
+            padding: 0.875rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        td {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-green {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .badge-blue {
+            background: #DBEAFE;
+            color: #1E40AF;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Sidebar -->
+    <div class="sidebar w-64 flex-shrink-0 flex flex-col" style="position: fixed; left: 0; top: 0; height: 100vh;">
+        <!-- Logo -->
+        <div class="p-6 border-b border-white/10">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: #A6192E;">
+                    <span class="text-white font-bold text-lg">TM</span>
+                </div>
+                <div>
+                    <h1 class="text-white font-bold text-base">Taylor Morrison</h1>
+                    <p class="text-white/60 text-xs">Job Requisition</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 py-6">
+            <a href="dashboard.html" class="nav-item">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                Dashboard
+            </a>
+            <a href="requisitions.html" class="nav-item">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                </svg>
+                Open Requisitions
+            </a>
+            <a href="filled-dashboard.html" class="nav-item active">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Filled Requisitions
+            </a>
+            <a href="candidate-stage.html" class="nav-item">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+                Candidate Stage
+            </a>
+        </nav>
+
+        <!-- User Profile -->
+        <div class="p-4 border-t border-white/10">
+            <div class="flex items-center space-x-3 px-2">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                    JR
+                </div>
+                <div class="flex-1">
+                    <p class="text-white text-sm font-medium">Admin User</p>
+                    <p class="text-white/60 text-xs">admin@tm.com</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="ml-64 p-8" id="main-content">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900">Filled Requisitions Dashboard</h2>
+                <p class="text-gray-500 mt-1">Performance analytics for the last 13 months</p>
+            </div>
+            <div class="flex flex-col items-end space-y-2">
+                <div class="flex items-center space-x-3">
+                    <button onclick="exportToPDF()" class="flex items-center px-4 py-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
+                        <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                        </svg>
+                        Export PDF
+                    </button>
+                    <button onclick="refreshData()" class="flex items-center px-4 py-2.5 bg-[#A6192E] text-white rounded-lg hover:bg-[#7C2D3B] transition-colors text-sm font-medium">
+                        <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+                <div class="text-xs text-gray-500">
+                    Data refreshed: <span id="dataRefreshTimestamp" class="font-medium text-gray-700">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Banner (Hidden by default) -->
+        <div id="filterBanner" class="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg hidden">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                    </svg>
+                    <span class="text-sm font-medium text-yellow-900">Active Filters:</span>
+                    <div id="filterBadges" class="flex space-x-2"></div>
+                </div>
+                <button onclick="clearFilters()" class="text-sm font-medium text-yellow-900 hover:text-yellow-700">Clear All</button>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Filled -->
+            <div class="stat-card p-4">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="stat-label">Total Filled</p>
+                        <h3 class="stat-value mt-2" id="totalFilled">--</h3>
+                        <p class="text-xs text-gray-500 mt-2">Last 13 months</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(16, 185, 129, 0.1);">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Avg Time to Fill -->
+            <div class="stat-card p-4">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="stat-label">Avg Time to Fill</p>
+                        <h3 class="stat-value mt-2" id="avgTimeToFill">--</h3>
+                        <p class="text-xs text-gray-500 mt-2">Days on average</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(59, 130, 246, 0.1);">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Median Time to Fill -->
+            <div class="stat-card p-4">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="stat-label">Median Time to Fill</p>
+                        <h3 class="stat-value mt-2" id="medianTimeToFill">--</h3>
+                        <p class="text-xs text-gray-500 mt-2">Middle value</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(139, 92, 246, 0.1);">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fill Rate Range -->
+            <div class="stat-card p-4">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="stat-label">Fill Time Range</p>
+                        <h3 class="stat-value mt-2"><span id="fastestFill">--</span> - <span id="slowestFill">--</span></h3>
+                        <p class="text-xs text-gray-500 mt-2">Fastest to slowest (days)</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(245, 158, 11, 0.1);">
+                        <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Monthly Trend -->
+            <div class="chart-container">
+                <h3 class="chart-title">Monthly Filled Requisitions (Last 13 Months)</h3>
+                <div style="height: 300px;">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- By Area -->
+            <div class="chart-container">
+                <h3 class="chart-title">Top Areas</h3>
+                <div style="height: 300px;">
+                    <canvas id="areaChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Divisions & Departments -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Top Divisions -->
+            <div class="chart-container">
+                <h3 class="chart-title">Top Divisions (Filled Last 13 Months)</h3>
+                <div style="height: 400px;">
+                    <canvas id="divisionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Top Departments -->
+            <div class="chart-container">
+                <h3 class="chart-title">Top Departments (Filled Last 13 Months)</h3>
+                <div style="height: 400px;">
+                    <canvas id="departmentChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recently Filled Table -->
+        <div class="chart-container">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="chart-title mb-0">Recently Filled Requisitions</h3>
+            </div>
+            <div style="max-height: 500px; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Requisition</th>
+                            <th>Job Title</th>
+                            <th>Department</th>
+                            <th>Division</th>
+                            <th>Area</th>
+                            <th>Location</th>
+                            <th>Start Date</th>
+                            <th>Filled Date</th>
+                            <th class="text-right">Days to Fill</th>
+                        </tr>
+                    </thead>
+                    <tbody id="filledTableBody">
+                        <tr><td colspan="9" class="py-4 text-center text-gray-500 text-sm">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Export Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        // API Configuration
+        const API_BASE = 'http://127.0.0.1:8081/api/filled-analytics';
+
+        // Chart instances
+        const charts = {
+            monthly: null,
+            area: null,
+            division: null,
+            department: null
+        };
+
+        // Active filters
+        const activeFilters = {
+            area: null,
+            division: null,
+            department: null
+        };
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshData();
+        });
+
+        function buildFilterParams() {
+            const params = new URLSearchParams();
+            if (activeFilters.area) params.append('area', activeFilters.area);
+            if (activeFilters.division) params.append('division', activeFilters.division);
+            if (activeFilters.department) params.append('department', activeFilters.department);
+            return params.toString() ? '?' + params.toString() : '';
+        }
+
+        function showFilterBanner() {
+            const banner = document.getElementById('filterBanner');
+            const badgesContainer = document.getElementById('filterBadges');
+
+            if (!activeFilters.area && !activeFilters.division && !activeFilters.department) {
+                banner.classList.add('hidden');
+                return;
+            }
+
+            let badges = '';
+            if (activeFilters.area) {
+                badges += `<span class="filter-badge">Area: ${activeFilters.area}<button onclick="removeFilter('area')">×</button></span>`;
+            }
+            if (activeFilters.division) {
+                badges += `<span class="filter-badge">Division: ${activeFilters.division}<button onclick="removeFilter('division')">×</button></span>`;
+            }
+            if (activeFilters.department) {
+                badges += `<span class="filter-badge">Department: ${activeFilters.department}<button onclick="removeFilter('department')">×</button></span>`;
+            }
+
+            badgesContainer.innerHTML = badges;
+            banner.classList.remove('hidden');
+        }
+
+        function removeFilter(type) {
+            activeFilters[type] = null;
+            showFilterBanner();
+            refreshData();
+        }
+
+        function clearFilters() {
+            activeFilters.area = null;
+            activeFilters.division = null;
+            activeFilters.department = null;
+            showFilterBanner();
+            refreshData();
+        }
+
+        async function loadRefreshTimestamp() {
+            try {
+                const response = await fetch('http://127.0.0.1:8081/api/analytics/refresh-timestamp');
+                const data = await response.json();
+                if (data.refresh_timestamp) {
+                    const date = new Date(data.refresh_timestamp);
+                    const formatted = date.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                    document.getElementById('dataRefreshTimestamp').textContent = formatted + ' AZ';
+                }
+            } catch (error) {
+                console.error('Error loading refresh timestamp:', error);
+            }
+        }
+
+        async function refreshData() {
+            await Promise.all([
+                loadSummary(),
+                loadMonthlyChart(),
+                loadAreaChart(),
+                loadDivisionChart(),
+                loadDepartmentChart(),
+                loadRecentFilledTable(),
+                loadRefreshTimestamp()
+            ]);
+        }
+
+        function formatNumber(num) {
+            return num ? num.toLocaleString() : '0';
+        }
+
+        async function loadSummary() {
+            try {
+                const response = await fetch(`${API_BASE}/summary${buildFilterParams()}`);
+                const data = await response.json();
+
+                document.getElementById('totalFilled').textContent = formatNumber(data.total_filled);
+                document.getElementById('avgTimeToFill').textContent = data.avg_time_to_fill.toFixed(1);
+                document.getElementById('medianTimeToFill').textContent = data.median_time_to_fill.toFixed(1);
+                document.getElementById('fastestFill').textContent = data.fastest_fill;
+                document.getElementById('slowestFill').textContent = data.slowest_fill;
+            } catch (error) {
+                console.error('Error loading summary:', error);
+            }
+        }
+
+        async function loadMonthlyChart() {
+            try {
+                const response = await fetch(`${API_BASE}/monthly${buildFilterParams()}`);
+                const data = await response.json();
+
+                const ctx = document.getElementById('monthlyChart').getContext('2d');
+                if (charts.monthly) charts.monthly.destroy();
+
+                charts.monthly = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.map(d => d.month),
+                        datasets: [{
+                            label: 'Filled Count',
+                            data: data.map(d => d.filled_count),
+                            backgroundColor: '#10B981',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: {
+                            legend: { display: false },
+                            datalabels: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#F1F5F9' }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading monthly chart:', error);
+            }
+        }
+
+        async function loadAreaChart() {
+            try {
+                const response = await fetch(`${API_BASE}/by-area${buildFilterParams()}`);
+                const data = await response.json();
+
+                const ctx = document.getElementById('areaChart').getContext('2d');
+                if (charts.area) charts.area.destroy();
+
+                charts.area = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.map(d => d.area),
+                        datasets: [{
+                            data: data.map(d => d.filled_count),
+                            backgroundColor: [
+                                '#A6192E', '#EF4444', '#F59E0B', '#10B981', '#3B82F6',
+                                '#6366F1', '#8B5CF6', '#EC4899', '#F43F5E', '#14B8A6'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        onClick: (event, activeElements) => {
+                            if (activeElements.length > 0) {
+                                const index = activeElements[0].index;
+                                const selectedArea = data[index].area;
+                                activeFilters.area = selectedArea;
+                                activeFilters.division = null;
+                                activeFilters.department = null;
+                                showFilterBanner();
+                                refreshData();
+                            }
+                        },
+                        onHover: (event, activeElements) => {
+                            event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    font: { size: 11 },
+                                    padding: 12,
+                                    usePointStyle: true
+                                }
+                            },
+                            datalabels: { display: false }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading area chart:', error);
+            }
+        }
+
+        async function loadDivisionChart() {
+            try {
+                const response = await fetch(`${API_BASE}/by-division${buildFilterParams()}`);
+                const data = await response.json();
+
+                const ctx = document.getElementById('divisionChart').getContext('2d');
+                if (charts.division) charts.division.destroy();
+
+                charts.division = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.map(d => d.division.length > 30 ? d.division.substring(0, 30) + '...' : d.division),
+                        datasets: [{
+                            label: 'Filled Count',
+                            data: data.map(d => d.filled_count),
+                            backgroundColor: '#10B981',
+                            borderRadius: 6,
+                            barThickness: 15
+                        }, {
+                            label: 'Currently Open',
+                            data: data.map(d => d.open_count),
+                            backgroundColor: '#A6192E',
+                            borderRadius: 6,
+                            barThickness: 15
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        onClick: (event, activeElements) => {
+                            if (activeElements.length > 0) {
+                                const index = activeElements[0].index;
+                                const selectedDivision = data[index].division;
+                                activeFilters.division = selectedDivision;
+                                activeFilters.area = null;
+                                activeFilters.department = null;
+                                showFilterBanner();
+                                refreshData();
+                            }
+                        },
+                        onHover: (event, activeElements) => {
+                            event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    font: { size: 11 },
+                                    padding: 10,
+                                    usePointStyle: true
+                                }
+                            },
+                            datalabels: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                grid: { color: '#F1F5F9' }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { font: { size: 11 } }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading division chart:', error);
+            }
+        }
+
+        async function loadDepartmentChart() {
+            try {
+                const response = await fetch(`${API_BASE}/by-department${buildFilterParams()}`);
+                const data = await response.json();
+
+                const ctx = document.getElementById('departmentChart').getContext('2d');
+                if (charts.department) charts.department.destroy();
+
+                charts.department = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.map(d => d.department.length > 30 ? d.department.substring(0, 30) + '...' : d.department),
+                        datasets: [{
+                            label: 'Filled Count',
+                            data: data.map(d => d.filled_count),
+                            backgroundColor: '#10B981',
+                            borderRadius: 6,
+                            barThickness: 15
+                        }, {
+                            label: 'Currently Open',
+                            data: data.map(d => d.open_count),
+                            backgroundColor: '#3B82F6',
+                            borderRadius: 6,
+                            barThickness: 15
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        onClick: (event, activeElements) => {
+                            if (activeElements.length > 0) {
+                                const index = activeElements[0].index;
+                                const selectedDepartment = data[index].department;
+                                activeFilters.department = selectedDepartment;
+                                activeFilters.area = null;
+                                activeFilters.division = null;
+                                showFilterBanner();
+                                refreshData();
+                            }
+                        },
+                        onHover: (event, activeElements) => {
+                            event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    font: { size: 11 },
+                                    padding: 10,
+                                    usePointStyle: true
+                                }
+                            },
+                            datalabels: { display: false }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                grid: { color: '#F1F5F9' }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: { font: { size: 11 } }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading department chart:', error);
+            }
+        }
+
+        async function loadRecentFilledTable() {
+            try {
+                const response = await fetch(`${API_BASE}/recent${buildFilterParams()}`);
+                const data = await response.json();
+
+                const tbody = document.getElementById('filledTableBody');
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="py-4 text-center text-gray-500 text-sm">No filled requisitions found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.slice(0, 20).map(req => `
+                    <tr class="border-b border-gray-50 hover:bg-gray-50">
+                        <td class="py-2 text-sm font-medium text-gray-900">${req.requisition}</td>
+                        <td class="py-2 text-sm text-gray-900">${req.job_title}</td>
+                        <td class="py-2 text-sm text-gray-600">${req.department}</td>
+                        <td class="py-2 text-sm text-gray-600">${req.division || 'N/A'}</td>
+                        <td class="py-2 text-sm text-gray-600">${req.area || 'N/A'}</td>
+                        <td class="py-2 text-sm text-gray-600">${req.location}</td>
+                        <td class="py-2 text-sm text-gray-600">${req.recruiting_start_date}</td>
+                        <td class="py-2 text-sm text-gray-600">${req.filled_date}</td>
+                        <td class="py-2 text-sm text-right">
+                            <span class="badge badge-green">${req.days_to_fill} days</span>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading filled table:', error);
+            }
+        }
+
+        function exportToPDF() {
+            const element = document.getElementById('main-content');
+            const originalButtonText = event.target.closest('button').innerHTML;
+            event.target.closest('button').innerHTML = '<svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span class="ml-1.5">Exporting...</span>';
+
+            const opt = {
+                margin: [0.5, 0.5, 0.5, 0.5],
+                filename: `Filled_Requisitions_Dashboard_${new Date().toISOString().split('T')[0]}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#F8FAFC'
+                },
+                jsPDF: {
+                    unit: 'in',
+                    format: 'letter',
+                    orientation: 'landscape'
+                }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                event.target.closest('button').innerHTML = originalButtonText;
+            });
+        }
+    </script>
+</body>
+</html>

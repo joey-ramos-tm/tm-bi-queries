@@ -1,0 +1,54 @@
+# Job Requisition Dashboard - Development Docker Compose
+# For local development with hot reload
+
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    container_name: job-req-backend-dev
+    ports:
+      - "8080:8080"
+    environment:
+      - SQL_SERVER=${SQL_SERVER}
+      - SQL_DATABASE_DATALAKE=${SQL_DATABASE_DATALAKE}
+      - SQL_DRIVER=${SQL_DRIVER}
+      - API_HOST=0.0.0.0
+      - API_PORT=8080
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+    volumes:
+      - ../backend:/app
+      - ../sql_connection.py:/app/sql_connection.py
+    command: uvicorn app:app --host 0.0.0.0 --port 8080 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - job-req-network
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    container_name: job-req-frontend-dev
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - job-req-network
+
+networks:
+  job-req-network:
+    driver: bridge
