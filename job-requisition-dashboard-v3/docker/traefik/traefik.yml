@@ -1,0 +1,56 @@
+# Traefik Configuration
+# Reverse proxy and load balancer
+
+# API and Dashboard
+api:
+  dashboard: true
+  insecure: true  # Set to false in production with proper auth
+
+# Entry Points
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+
+  websecure:
+    address: ":443"
+
+# Providers
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: job-req-network
+
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: true
+
+# Certificates (Let's Encrypt)
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: admin@taylormorrison.com
+      storage: /certificates/acme.json
+      httpChallenge:
+        entryPoint: web
+
+# Logging
+log:
+  level: INFO
+  format: json
+
+# Access Logs
+accessLog:
+  format: json
+  fields:
+    headers:
+      defaultMode: keep
+      names:
+        User-Agent: keep
+        Authorization: drop
+        Cookie: drop
