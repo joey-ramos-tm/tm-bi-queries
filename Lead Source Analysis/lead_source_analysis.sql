@@ -99,7 +99,7 @@ LeadSourceMetrics AS (
         ON fls.CONTACT_ID = fs.CONTACT_ID
         AND fs.rn = 1
     WHERE fls.rn = 1  -- Only first lead source per contact
-)
+),
 
 -- CTE 5: Calculate aggregated metrics by Lead Source
 AggregatedMetrics AS (
@@ -129,29 +129,12 @@ AggregatedMetrics AS (
     FROM LeadSourceMetrics
     GROUP BY LEAD_SRC_NM, LEAD_SRC_TXT
     HAVING COUNT(DISTINCT CONTACT_ID) >= 10  -- Only include lead sources with at least 10 contacts
-),
-
--- CTE 6: Calculate median metrics separately
-MedianMetrics AS (
-    SELECT
-        LEAD_SRC_NM,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Days_LeadSource_To_Appointment) AS Median_Days_To_Appointment,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Days_Appointment_To_Sale) AS Median_Days_Appointment_To_Sale,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Days_LeadSource_To_Sale) AS Median_Days_To_Sale
-    FROM LeadSourceMetrics
-    WHERE LEAD_SRC_NM IN (SELECT LEAD_SRC_NM FROM AggregatedMetrics)
-    GROUP BY LEAD_SRC_NM
 )
 
--- Final results combining aggregated and median metrics
-SELECT
-    am.*,
-    mm.Median_Days_To_Appointment,
-    mm.Median_Days_Appointment_To_Sale,
-    mm.Median_Days_To_Sale
-FROM AggregatedMetrics am
-LEFT JOIN MedianMetrics mm ON am.LEAD_SRC_NM = mm.LEAD_SRC_NM
-ORDER BY am.Total_Sales DESC, am.Total_Appointments DESC;
+-- Final results
+SELECT *
+FROM AggregatedMetrics
+ORDER BY Total_Sales DESC, Total_Appointments DESC;
 
 
 /*
