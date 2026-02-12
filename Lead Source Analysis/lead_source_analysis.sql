@@ -1,0 +1,159 @@
+/*
+Lead Source Analysis
+Determines first lead source, days to first appointment, and days to sale
+Optimized for performance with CTEs and proper filtering
+*/
+
+-- CTE 1: Get first lead source per contact/account
+WITH FirstLeadSource AS (
+    SELECT
+        CONTACT_ID,
+        LEAD_SRC_ID,
+        LEAD_SRC_NAME,
+        LEAD_SRC_TYPE,
+        CREATED_DATE,
+        ROW_NUMBER() OVER (
+            PARTITION BY CONTACT_ID
+            ORDER BY CREATED_DATE ASC
+        ) AS rn
+    FROM [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC]
+    WHERE CONTACT_ID IS NOT NULL
+),
+
+-- CTE 2: Get first appointment per contact
+FirstAppointment AS (
+    SELECT
+        CONTACT_ID,
+        EVENT_ID,
+        EVENT_DATE,
+        EVENT_TYPE,
+        ROW_NUMBER() OVER (
+            PARTITION BY CONTACT_ID
+            ORDER BY EVENT_DATE ASC
+        ) AS rn
+    FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
+    WHERE APP_TYPE_HANDLE_CD = 'APP_TYPE_HANDLE_CD'
+        AND CONTACT_ID IS NOT NULL
+        AND EVENT_DATE IS NOT NULL
+),
+
+-- CTE 3: Get sale information per contact
+-- NOTE: Update this CTE with your actual sales table and columns
+FirstSale AS (
+    SELECT
+        CONTACT_ID,
+        SALE_ID,
+        SALE_DATE,
+        SALE_AMOUNT,
+        ROW_NUMBER() OVER (
+            PARTITION BY CONTACT_ID
+            ORDER BY SALE_DATE ASC
+        ) AS rn
+    FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[SALE]  -- Update with actual sales table
+    WHERE CONTACT_ID IS NOT NULL
+        AND SALE_DATE IS NOT NULL
+),
+
+-- CTE 4: Combine all data with calculated days
+LeadSourceMetrics AS (
+    SELECT
+        fls.CONTACT_ID,
+        fls.LEAD_SRC_ID,
+        fls.LEAD_SRC_NAME,
+        fls.LEAD_SRC_TYPE,
+        fls.CREATED_DATE AS Lead_Source_Date,
+        fa.EVENT_DATE AS First_Appointment_Date,
+        fs.SALE_DATE AS First_Sale_Date,
+
+        -- Calculate days from lead source to appointment
+        CASE
+            WHEN fa.EVENT_DATE IS NOT NULL
+            THEN DATEDIFF(DAY, fls.CREATED_DATE, fa.EVENT_DATE)
+            ELSE NULL
+        END AS Days_LeadSource_To_Appointment,
+
+        -- Calculate days from appointment to sale
+        CASE
+            WHEN fa.EVENT_DATE IS NOT NULL AND fs.SALE_DATE IS NOT NULL
+            THEN DATEDIFF(DAY, fa.EVENT_DATE, fs.SALE_DATE)
+            ELSE NULL
+        END AS Days_Appointment_To_Sale,
+
+        -- Calculate total days from lead source to sale
+        CASE
+            WHEN fs.SALE_DATE IS NOT NULL
+            THEN DATEDIFF(DAY, fls.CREATED_DATE, fs.SALE_DATE)
+            ELSE NULL
+        END AS Days_LeadSource_To_Sale,
+
+        -- Flags for analysis
+        CASE WHEN fa.EVENT_DATE IS NOT NULL THEN 1 ELSE 0 END AS Had_Appointment,
+        CASE WHEN fs.SALE_DATE IS NOT NULL THEN 1 ELSE 0 END AS Had_Sale,
+
+        fs.SALE_AMOUNT
+
+    FROM FirstLeadSource fls
+    LEFT JOIN FirstAppointment fa
+        ON fls.CONTACT_ID = fa.CONTACT_ID
+        AND fa.rn = 1
+    LEFT JOIN FirstSale fs
+        ON fls.CONTACT_ID = fs.CONTACT_ID
+        AND fs.rn = 1
+    WHERE fls.rn = 1  -- Only first lead source per contact
+)
+
+-- Final aggregated results by Lead Source
+SELECT
+    LEAD_SRC_NAME,
+    LEAD_SRC_TYPE,
+
+    -- Contact counts
+    COUNT(DISTINCT CONTACT_ID) AS Total_Contacts,
+    SUM(Had_Appointment) AS Total_Appointments,
+    SUM(Had_Sale) AS Total_Sales,
+
+    -- Conversion rates
+    CAST(SUM(Had_Appointment) * 100.0 / COUNT(DISTINCT CONTACT_ID) AS DECIMAL(5,2)) AS Appointment_Conversion_Rate,
+    CAST(SUM(Had_Sale) * 100.0 / COUNT(DISTINCT CONTACT_ID) AS DECIMAL(5,2)) AS Sale_Conversion_Rate,
+    CAST(SUM(Had_Sale) * 100.0 / NULLIF(SUM(Had_Appointment), 0) AS DECIMAL(5,2)) AS Appointment_To_Sale_Rate,
+
+    -- Average days metrics
+    AVG(Days_LeadSource_To_Appointment) AS Avg_Days_To_First_Appointment,
+    AVG(Days_Appointment_To_Sale) AS Avg_Days_Appointment_To_Sale,
+    AVG(Days_LeadSource_To_Sale) AS Avg_Days_To_Sale,
+
+    -- Median days (using PERCENTILE_CONT)
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Days_LeadSource_To_Appointment)
+        OVER (PARTITION BY LEAD_SRC_NAME) AS Median_Days_To_Appointment,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Days_Appointment_To_Sale)
+        OVER (PARTITION BY LEAD_SRC_NAME) AS Median_Days_Appointment_To_Sale,
+
+    -- Revenue metrics
+    SUM(SALE_AMOUNT) AS Total_Revenue,
+    AVG(SALE_AMOUNT) AS Avg_Sale_Amount
+
+FROM LeadSourceMetrics
+GROUP BY LEAD_SRC_NAME, LEAD_SRC_TYPE
+HAVING COUNT(DISTINCT CONTACT_ID) >= 10  -- Only include lead sources with at least 10 contacts
+ORDER BY Total_Sales DESC, Total_Appointments DESC;
+
+
+/*
+OPTIMIZATION NOTES:
+1. Uses CTEs with ROW_NUMBER() to get first occurrences efficiently
+2. Filters NULL values early to reduce dataset size
+3. Uses LEFT JOINs appropriately to preserve lead source data
+4. Aggregates only after all filtering is complete
+5. HAVING clause filters after aggregation for efficiency
+
+RECOMMENDED INDEXES:
+CREATE INDEX idx_lead_src_contact_created ON [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC] (CONTACT_ID, CREATED_DATE);
+CREATE INDEX idx_event_contact_date ON [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT] (CONTACT_ID, EVENT_DATE) WHERE APP_TYPE_HANDLE_CD = 'APP_TYPE_HANDLE_CD';
+CREATE INDEX idx_sale_contact_date ON [TaylorMorrisonDWH_Silver].[SILVER_DB].[SALE] (CONTACT_ID, SALE_DATE);
+
+USAGE NOTES:
+- Update the FirstSale CTE with your actual sales table name and column names
+- The APP_TYPE_HANDLE_CD filter may need adjustment based on actual values
+- Adjust the HAVING clause threshold (currently 10) based on your data volume
+- Consider adding date range filters for recent data analysis
+*/
