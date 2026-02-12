@@ -16,11 +16,25 @@ WITH FirstLeadSource AS (
             PARTITION BY CONTACT_ID
             ORDER BY CREATE_TMS ASC
         ) AS rn
-    FROM [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC]
-    WHERE CONTACT_ID IS NOT NULL
+    FROM (
+        SELECT
+            CONTACT_ID,
+            LEAD_SRC_ID,
+            LEAD_SRC_NM,
+            LEAD_SRC_TXT,
+            CREATE_TMS
+        FROM [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC]
+        WHERE CONTACT_ID IS NOT NULL
+        GROUP BY
+            CONTACT_ID,
+            LEAD_SRC_ID,
+            LEAD_SRC_NM,
+            LEAD_SRC_TXT,
+            CREATE_TMS
+    ) deduplicated_leads
 ),
 
--- CTE 2: Get first appointment per contact
+-- CTE 2: Get first appointment per contact (deduplicated)
 FirstAppointment AS (
     SELECT
         CONTACT_ID,
@@ -31,28 +45,52 @@ FirstAppointment AS (
             PARTITION BY CONTACT_ID
             ORDER BY ACTVTY_DT ASC
         ) AS rn
-    FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
-    WHERE APP_TYPE_HANDLE_CD = 'appointment'
-        AND CONTACT_ID IS NOT NULL
-        AND ACTVTY_DT IS NOT NULL
+    FROM (
+        SELECT
+            CONTACT_ID,
+            EVENT_ID,
+            ACTVTY_DT,
+            TYPE_CD
+        FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
+        WHERE APP_TYPE_HANDLE_CD = 'appointment'
+            AND CONTACT_ID IS NOT NULL
+            AND ACTVTY_DT IS NOT NULL
+        GROUP BY
+            CONTACT_ID,
+            EVENT_ID,
+            ACTVTY_DT,
+            TYPE_CD
+    ) deduplicated_appointments
 ),
 
--- CTE 3: Get sale information per contact
+-- CTE 3: Get sale information per contact (deduplicated first, then get first sale)
 FirstSale AS (
     SELECT
-        c.CONTACT_ID,
-        sd.QuoteReferenceName AS SALE_ID,
-        sd.ApprovalDate AS SALE_DATE,
-        sd.NetSalesPriceAmount AS SALE_AMOUNT,
+        CONTACT_ID,
+        SALE_ID,
+        SALE_DATE,
+        SALE_AMOUNT,
         ROW_NUMBER() OVER (
-            PARTITION BY c.CONTACT_ID
-            ORDER BY sd.ApprovalDate ASC
+            PARTITION BY CONTACT_ID
+            ORDER BY SALE_DATE ASC
         ) AS rn
-    FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] sd
-    INNER JOIN [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[CONTACT] c
-        ON sd.AccountId = c.ACCT_ID
-    WHERE c.CONTACT_ID IS NOT NULL
-        AND sd.ApprovalDate IS NOT NULL
+    FROM (
+        SELECT
+            c.CONTACT_ID,
+            sd.QuoteReferenceName AS SALE_ID,
+            sd.ApprovalDate AS SALE_DATE,
+            sd.NetSalesPriceAmount AS SALE_AMOUNT
+        FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] sd
+        INNER JOIN [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[CONTACT] c
+            ON sd.AccountId = c.ACCT_ID
+        WHERE c.CONTACT_ID IS NOT NULL
+            AND sd.ApprovalDate IS NOT NULL
+        GROUP BY
+            c.CONTACT_ID,
+            sd.QuoteReferenceName,
+            sd.ApprovalDate,
+            sd.NetSalesPriceAmount
+    ) deduplicated_sales
 ),
 
 -- CTE 4: Combine all data with calculated days
