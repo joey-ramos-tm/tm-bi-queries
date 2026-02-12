@@ -30,7 +30,7 @@ SELECT TOP 10
     TYPE_CD,
     APP_TYPE_HANDLE_CD
 FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
-WHERE APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment')
+WHERE APP_TYPE_HANDLE_CD = 'appointment'
     AND CONTACT_ID IS NOT NULL
 ORDER BY ACTVTY_DT DESC;
 
@@ -70,7 +70,7 @@ WITH LeadContacts AS (
 AppointmentContacts AS (
     SELECT DISTINCT CONTACT_ID
     FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
-    WHERE APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment')
+    WHERE APP_TYPE_HANDLE_CD = 'appointment'
         AND CONTACT_ID IS NOT NULL
 ),
 SaleContacts AS (
@@ -127,7 +127,7 @@ INNER JOIN [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[CONTACT] c
     ON ls.CONTACT_ID = c.CONTACT_ID
 INNER JOIN [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] sd
     ON c.ACCT_ID = sd.AccountId
-WHERE e.APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment')
+WHERE e.APP_TYPE_HANDLE_CD = 'appointment'
     AND sd.ApprovalDate IS NOT NULL
     AND ls.CONTACT_ID IS NOT NULL;
 
@@ -150,7 +150,7 @@ SELECT
     ACTVTY_DT AS Event_Date
 FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
 WHERE CONTACT_ID = @SampleContactID
-    AND APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment')
+    AND APP_TYPE_HANDLE_CD = 'appointment'
 UNION ALL
 -- Show sales for sample contact
 SELECT

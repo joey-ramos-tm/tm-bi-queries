@@ -32,7 +32,7 @@ FirstAppointment AS (
             ORDER BY ACTVTY_DT ASC
         ) AS rn
     FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
-    WHERE APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment')
+    WHERE APP_TYPE_HANDLE_CD = 'appointment'
         AND CONTACT_ID IS NOT NULL
         AND ACTVTY_DT IS NOT NULL
 ),

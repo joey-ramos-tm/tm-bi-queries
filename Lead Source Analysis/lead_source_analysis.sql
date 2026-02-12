@@ -32,7 +32,7 @@ FirstAppointment AS (
             ORDER BY ACTVTY_DT ASC
         ) AS rn
     FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
-    WHERE APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment')
+    WHERE APP_TYPE_HANDLE_CD = 'appointment'
         AND CONTACT_ID IS NOT NULL
         AND ACTVTY_DT IS NOT NULL
 ),
@@ -149,12 +149,12 @@ OPTIMIZATION NOTES:
 
 RECOMMENDED INDEXES:
 CREATE INDEX idx_lead_src_contact_created ON [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC] (CONTACT_ID, CREATE_TMS);
-CREATE INDEX idx_event_contact_date ON [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT] (CONTACT_ID, ACTVTY_DT) WHERE APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment');
+CREATE INDEX idx_event_contact_date ON [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT] (CONTACT_ID, ACTVTY_DT) WHERE APP_TYPE_HANDLE_CD = 'appointment';
 CREATE INDEX idx_contact_acct ON [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[CONTACT] (ACCT_ID, CONTACT_ID);
 CREATE INDEX idx_sale_account_date ON [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] (AccountId, ApprovalDate) WHERE ApprovalDate IS NOT NULL;
 
 USAGE NOTES:
-- The APP_TYPE_HANDLE_CD filter includes common appointment types (appointment, In Person Tour, Virtual Tour, Virtual Appointment)
+- The APP_TYPE_HANDLE_CD filter is set to 'appointment' only
 - Adjust the HAVING clause threshold (currently 10) based on your data volume
 - Consider adding date range filters for recent data analysis
 - Sales are identified by ApprovalDate IS NOT NULL in SaleDetail table
