@@ -18,12 +18,13 @@ class RequisitionService:
 
     # Stage ranking lookup based on Excel file
     STAGE_RANKINGS = {
-        'Ready for Hire': 8,
-        'Pre-Employment Verification': 7,
-        'Declined by Candidate': 6,
-        'Offer': 5,
+        'Ready for Hire': 9,
+        'Pre-Employment Verification': 8,
+        'Employment Agreement': 7,
+        'Offer': 6,
+        'Manager Review Complete': 5,
         'Interview': 4,
-        'Manager Review Complete': 3,
+        'Recruiter Screen': 3,
         'Manager Review': 2,
         'New': 1
     }
