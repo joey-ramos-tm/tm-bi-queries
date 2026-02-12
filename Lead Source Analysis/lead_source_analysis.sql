@@ -40,17 +40,19 @@ FirstAppointment AS (
 -- CTE 3: Get sale information per contact
 FirstSale AS (
     SELECT
-        AccountId AS CONTACT_ID,
-        QuoteReferenceName AS SALE_ID,
-        ApprovalDate AS SALE_DATE,
-        NetSalesPriceAmount AS SALE_AMOUNT,
+        c.CONTACT_ID,
+        sd.QuoteReferenceName AS SALE_ID,
+        sd.ApprovalDate AS SALE_DATE,
+        sd.NetSalesPriceAmount AS SALE_AMOUNT,
         ROW_NUMBER() OVER (
-            PARTITION BY AccountId
-            ORDER BY ApprovalDate ASC
+            PARTITION BY c.CONTACT_ID
+            ORDER BY sd.ApprovalDate ASC
         ) AS rn
-    FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail]
-    WHERE AccountId IS NOT NULL
-        AND ApprovalDate IS NOT NULL
+    FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] sd
+    INNER JOIN [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[CONTACT] c
+        ON sd.AccountId = c.ACCT_ID
+    WHERE c.CONTACT_ID IS NOT NULL
+        AND sd.ApprovalDate IS NOT NULL
 ),
 
 -- CTE 4: Combine all data with calculated days
@@ -148,11 +150,13 @@ OPTIMIZATION NOTES:
 RECOMMENDED INDEXES:
 CREATE INDEX idx_lead_src_contact_created ON [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC] (CONTACT_ID, CREATE_TMS);
 CREATE INDEX idx_event_contact_date ON [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT] (CONTACT_ID, ACTVTY_DT) WHERE APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment');
-CREATE INDEX idx_sale_contact_date ON [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] (AccountId, ApprovalDate) WHERE ApprovalDate IS NOT NULL;
+CREATE INDEX idx_contact_acct ON [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[CONTACT] (ACCT_ID, CONTACT_ID);
+CREATE INDEX idx_sale_account_date ON [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] (AccountId, ApprovalDate) WHERE ApprovalDate IS NOT NULL;
 
 USAGE NOTES:
 - The APP_TYPE_HANDLE_CD filter includes common appointment types (appointment, In Person Tour, Virtual Tour, Virtual Appointment)
 - Adjust the HAVING clause threshold (currently 10) based on your data volume
 - Consider adding date range filters for recent data analysis
 - Sales are identified by ApprovalDate IS NOT NULL in SaleDetail table
+- SaleDetail is joined to CONTACT table via AccountId = ACCT_ID to get CONTACT_ID
 */

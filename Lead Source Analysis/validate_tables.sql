@@ -74,9 +74,11 @@ AppointmentContacts AS (
         AND CONTACT_ID IS NOT NULL
 ),
 SaleContacts AS (
-    SELECT DISTINCT AccountId AS CONTACT_ID
-    FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail]
-    WHERE ApprovalDate IS NOT NULL
+    SELECT DISTINCT c.CONTACT_ID
+    FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] sd
+    INNER JOIN [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[CONTACT] c
+        ON sd.AccountId = c.ACCT_ID
+    WHERE sd.ApprovalDate IS NOT NULL
 )
 SELECT
     'Contacts with Lead Source' AS Category,
@@ -121,10 +123,12 @@ SELECT TOP 1 @SampleContactID = ls.CONTACT_ID
 FROM [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC] ls
 INNER JOIN [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT] e
     ON ls.CONTACT_ID = e.CONTACT_ID
-INNER JOIN [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] s
-    ON ls.CONTACT_ID = s.AccountId
+INNER JOIN [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[CONTACT] c
+    ON ls.CONTACT_ID = c.CONTACT_ID
+INNER JOIN [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] sd
+    ON c.ACCT_ID = sd.AccountId
 WHERE e.APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment')
-    AND s.ApprovalDate IS NOT NULL
+    AND sd.ApprovalDate IS NOT NULL
     AND ls.CONTACT_ID IS NOT NULL;
 
 PRINT 'Sample Contact ID: ' + ISNULL(@SampleContactID, 'None Found');
@@ -151,12 +155,14 @@ UNION ALL
 -- Show sales for sample contact
 SELECT
     'Sale' AS Source_Type,
-    AccountId AS CONTACT_ID,
-    QuoteReferenceName AS Detail,
-    ApprovalDate AS Event_Date
-FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail]
-WHERE AccountId = @SampleContactID
-    AND ApprovalDate IS NOT NULL
+    c.CONTACT_ID,
+    sd.QuoteReferenceName AS Detail,
+    sd.ApprovalDate AS Event_Date
+FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] sd
+INNER JOIN [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[CONTACT] c
+    ON sd.AccountId = c.ACCT_ID
+WHERE c.CONTACT_ID = @SampleContactID
+    AND sd.ApprovalDate IS NOT NULL
 ORDER BY Event_Date;
 
 /*

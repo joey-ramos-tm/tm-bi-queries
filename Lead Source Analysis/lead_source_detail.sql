@@ -40,17 +40,19 @@ FirstAppointment AS (
 -- CTE 3: Get sale information per contact
 FirstSale AS (
     SELECT
-        AccountId AS CONTACT_ID,
-        QuoteReferenceName AS SALE_ID,
-        ApprovalDate AS SALE_DATE,
-        NetSalesPriceAmount AS SALE_AMOUNT,
+        c.CONTACT_ID,
+        sd.QuoteReferenceName AS SALE_ID,
+        sd.ApprovalDate AS SALE_DATE,
+        sd.NetSalesPriceAmount AS SALE_AMOUNT,
         ROW_NUMBER() OVER (
-            PARTITION BY AccountId
-            ORDER BY ApprovalDate ASC
+            PARTITION BY c.CONTACT_ID
+            ORDER BY sd.ApprovalDate ASC
         ) AS rn
-    FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail]
-    WHERE AccountId IS NOT NULL
-        AND ApprovalDate IS NOT NULL
+    FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] sd
+    INNER JOIN [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[CONTACT] c
+        ON sd.AccountId = c.ACCT_ID
+    WHERE c.CONTACT_ID IS NOT NULL
+        AND sd.ApprovalDate IS NOT NULL
 )
 
 -- Detail level output with all contacts and their journey
