@@ -13,6 +13,7 @@ from models.analytics import (
     TrendDataPoint,
     CriticalRequisition
 )
+from services.requisition_service import RequisitionService
 
 
 class AnalyticsService:
@@ -411,6 +412,11 @@ class AnalyticsService:
         """
 
         results = execute_query(query)
+
+        # Get candidate stages for all critical requisitions
+        requisition_ids = [row.get('Requisition', '') for row in results]
+        stage_map = RequisitionService.get_max_ranked_stage_for_requisitions(requisition_ids)
+
         return [
             CriticalRequisition(
                 requisition=row.get('Requisition', ''),
@@ -421,7 +427,8 @@ class AnalyticsService:
                 location=row.get('Location', 'Unknown') or 'Unknown',
                 start_date=row.get('Start_Date').strftime('%Y-%m-%d') if row.get('Start_Date') else 'N/A',
                 target_hire_date=row.get('Target_Hire_Date').strftime('%Y-%m-%d') if row.get('Target_Hire_Date') else None,
-                days_open=row.get('Days_Open', 0) or 0
+                days_open=row.get('Days_Open', 0) or 0,
+                candidate_stage=stage_map.get(row.get('Requisition', ''))
             )
             for row in results
         ]

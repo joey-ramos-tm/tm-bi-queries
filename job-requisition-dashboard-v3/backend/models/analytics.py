@@ -119,6 +119,7 @@ class CriticalRequisition(BaseModel):
     start_date: str = Field(..., description="Start date (YYYY-MM-DD)")
     target_hire_date: Optional[str] = Field(None, description="Target hire date (YYYY-MM-DD)")
     days_open: int = Field(..., description="Number of days open")
+    candidate_stage: Optional[str] = Field(None, description="Highest ranked candidate stage")
 
     class Config:
         json_schema_extra = {
