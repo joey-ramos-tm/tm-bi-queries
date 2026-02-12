@@ -359,9 +359,9 @@
 
                 // Determine badge class for candidate stage
                 const stageClass = req.candidate_stage ?
-                    (req.candidate_stage === 'Ready for Hire' || req.candidate_stage === 'Pre-Employment Verification' ? 'badge-green' :
-                     req.candidate_stage === 'Offer' || req.candidate_stage === 'Interview' ? 'badge-blue' :
-                     req.candidate_stage === 'Declined by Candidate' ? 'badge-red' : 'badge-blue') : '';
+                    (req.candidate_stage === 'Ready for Hire' || req.candidate_stage === 'Pre-Employment Verification' || req.candidate_stage === 'Employment Agreement' ? 'badge-green' :
+                     req.candidate_stage === 'Offer' || req.candidate_stage === 'Manager Review Complete' || req.candidate_stage === 'Interview' || req.candidate_stage === 'Recruiter Screen' ? 'badge-blue' :
+                     'badge-blue') : '';
 
                 return `
                     <tr class="border-b border-gray-50 hover:bg-gray-50">
