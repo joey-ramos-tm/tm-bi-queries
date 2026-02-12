@@ -101,40 +101,57 @@ LeadSourceMetrics AS (
     WHERE fls.rn = 1  -- Only first lead source per contact
 )
 
--- Final aggregated results by Lead Source
+-- CTE 5: Calculate aggregated metrics by Lead Source
+AggregatedMetrics AS (
+    SELECT
+        LEAD_SRC_NM,
+        LEAD_SRC_TXT,
+
+        -- Contact counts
+        COUNT(DISTINCT CONTACT_ID) AS Total_Contacts,
+        SUM(Had_Appointment) AS Total_Appointments,
+        SUM(Had_Sale) AS Total_Sales,
+
+        -- Conversion rates
+        CAST(SUM(Had_Appointment) * 100.0 / COUNT(DISTINCT CONTACT_ID) AS DECIMAL(5,2)) AS Appointment_Conversion_Rate,
+        CAST(SUM(Had_Sale) * 100.0 / COUNT(DISTINCT CONTACT_ID) AS DECIMAL(5,2)) AS Sale_Conversion_Rate,
+        CAST(SUM(Had_Sale) * 100.0 / NULLIF(SUM(Had_Appointment), 0) AS DECIMAL(5,2)) AS Appointment_To_Sale_Rate,
+
+        -- Average days metrics
+        AVG(Days_LeadSource_To_Appointment) AS Avg_Days_To_First_Appointment,
+        AVG(Days_Appointment_To_Sale) AS Avg_Days_Appointment_To_Sale,
+        AVG(Days_LeadSource_To_Sale) AS Avg_Days_To_Sale,
+
+        -- Revenue metrics
+        SUM(SALE_AMOUNT) AS Total_Revenue,
+        AVG(SALE_AMOUNT) AS Avg_Sale_Amount
+
+    FROM LeadSourceMetrics
+    GROUP BY LEAD_SRC_NM, LEAD_SRC_TXT
+    HAVING COUNT(DISTINCT CONTACT_ID) >= 10  -- Only include lead sources with at least 10 contacts
+),
+
+-- CTE 6: Calculate median metrics separately
+MedianMetrics AS (
+    SELECT
+        LEAD_SRC_NM,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Days_LeadSource_To_Appointment) AS Median_Days_To_Appointment,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Days_Appointment_To_Sale) AS Median_Days_Appointment_To_Sale,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Days_LeadSource_To_Sale) AS Median_Days_To_Sale
+    FROM LeadSourceMetrics
+    WHERE LEAD_SRC_NM IN (SELECT LEAD_SRC_NM FROM AggregatedMetrics)
+    GROUP BY LEAD_SRC_NM
+)
+
+-- Final results combining aggregated and median metrics
 SELECT
-    LEAD_SRC_NM,
-    LEAD_SRC_TXT,
-
-    -- Contact counts
-    COUNT(DISTINCT CONTACT_ID) AS Total_Contacts,
-    SUM(Had_Appointment) AS Total_Appointments,
-    SUM(Had_Sale) AS Total_Sales,
-
-    -- Conversion rates
-    CAST(SUM(Had_Appointment) * 100.0 / COUNT(DISTINCT CONTACT_ID) AS DECIMAL(5,2)) AS Appointment_Conversion_Rate,
-    CAST(SUM(Had_Sale) * 100.0 / COUNT(DISTINCT CONTACT_ID) AS DECIMAL(5,2)) AS Sale_Conversion_Rate,
-    CAST(SUM(Had_Sale) * 100.0 / NULLIF(SUM(Had_Appointment), 0) AS DECIMAL(5,2)) AS Appointment_To_Sale_Rate,
-
-    -- Average days metrics
-    AVG(Days_LeadSource_To_Appointment) AS Avg_Days_To_First_Appointment,
-    AVG(Days_Appointment_To_Sale) AS Avg_Days_Appointment_To_Sale,
-    AVG(Days_LeadSource_To_Sale) AS Avg_Days_To_Sale,
-
-    -- Median days (using PERCENTILE_CONT)
-    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Days_LeadSource_To_Appointment)
-        OVER (PARTITION BY LEAD_SRC_NM) AS Median_Days_To_Appointment,
-    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Days_Appointment_To_Sale)
-        OVER (PARTITION BY LEAD_SRC_NM) AS Median_Days_Appointment_To_Sale,
-
-    -- Revenue metrics
-    SUM(SALE_AMOUNT) AS Total_Revenue,
-    AVG(SALE_AMOUNT) AS Avg_Sale_Amount
-
-FROM LeadSourceMetrics
-GROUP BY LEAD_SRC_NM, LEAD_SRC_TXT
-HAVING COUNT(DISTINCT CONTACT_ID) >= 10  -- Only include lead sources with at least 10 contacts
-ORDER BY Total_Sales DESC, Total_Appointments DESC;
+    am.*,
+    mm.Median_Days_To_Appointment,
+    mm.Median_Days_Appointment_To_Sale,
+    mm.Median_Days_To_Sale
+FROM AggregatedMetrics am
+LEFT JOIN MedianMetrics mm ON am.LEAD_SRC_NM = mm.LEAD_SRC_NM
+ORDER BY am.Total_Sales DESC, am.Total_Appointments DESC;
 
 
 /*
