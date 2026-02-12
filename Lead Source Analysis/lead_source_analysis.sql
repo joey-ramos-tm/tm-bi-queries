@@ -9,12 +9,12 @@ WITH FirstLeadSource AS (
     SELECT
         CONTACT_ID,
         LEAD_SRC_ID,
-        LEAD_SRC_NAME,
-        LEAD_SRC_TYPE,
-        CREATED_DATE,
+        LEAD_SRC_NM,
+        LEAD_SRC_TXT,
+        CREATE_TMS,
         ROW_NUMBER() OVER (
             PARTITION BY CONTACT_ID
-            ORDER BY CREATED_DATE ASC
+            ORDER BY CREATE_TMS ASC
         ) AS rn
     FROM [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC]
     WHERE CONTACT_ID IS NOT NULL
@@ -59,16 +59,16 @@ LeadSourceMetrics AS (
     SELECT
         fls.CONTACT_ID,
         fls.LEAD_SRC_ID,
-        fls.LEAD_SRC_NAME,
-        fls.LEAD_SRC_TYPE,
-        fls.CREATED_DATE AS Lead_Source_Date,
+        fls.LEAD_SRC_NM,
+        fls.LEAD_SRC_TXT,
+        fls.CREATE_TMS AS Lead_Source_Date,
         fa.EVENT_DATE AS First_Appointment_Date,
         fs.SALE_DATE AS First_Sale_Date,
 
         -- Calculate days from lead source to appointment
         CASE
             WHEN fa.EVENT_DATE IS NOT NULL
-            THEN DATEDIFF(DAY, fls.CREATED_DATE, fa.EVENT_DATE)
+            THEN DATEDIFF(DAY, fls.CREATE_TMS, fa.EVENT_DATE)
             ELSE NULL
         END AS Days_LeadSource_To_Appointment,
 
@@ -82,7 +82,7 @@ LeadSourceMetrics AS (
         -- Calculate total days from lead source to sale
         CASE
             WHEN fs.SALE_DATE IS NOT NULL
-            THEN DATEDIFF(DAY, fls.CREATED_DATE, fs.SALE_DATE)
+            THEN DATEDIFF(DAY, fls.CREATE_TMS, fs.SALE_DATE)
             ELSE NULL
         END AS Days_LeadSource_To_Sale,
 
@@ -104,8 +104,8 @@ LeadSourceMetrics AS (
 
 -- Final aggregated results by Lead Source
 SELECT
-    LEAD_SRC_NAME,
-    LEAD_SRC_TYPE,
+    LEAD_SRC_NM,
+    LEAD_SRC_TXT,
 
     -- Contact counts
     COUNT(DISTINCT CONTACT_ID) AS Total_Contacts,
@@ -124,16 +124,16 @@ SELECT
 
     -- Median days (using PERCENTILE_CONT)
     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Days_LeadSource_To_Appointment)
-        OVER (PARTITION BY LEAD_SRC_NAME) AS Median_Days_To_Appointment,
+        OVER (PARTITION BY LEAD_SRC_NM) AS Median_Days_To_Appointment,
     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY Days_Appointment_To_Sale)
-        OVER (PARTITION BY LEAD_SRC_NAME) AS Median_Days_Appointment_To_Sale,
+        OVER (PARTITION BY LEAD_SRC_NM) AS Median_Days_Appointment_To_Sale,
 
     -- Revenue metrics
     SUM(SALE_AMOUNT) AS Total_Revenue,
     AVG(SALE_AMOUNT) AS Avg_Sale_Amount
 
 FROM LeadSourceMetrics
-GROUP BY LEAD_SRC_NAME, LEAD_SRC_TYPE
+GROUP BY LEAD_SRC_NM, LEAD_SRC_TXT
 HAVING COUNT(DISTINCT CONTACT_ID) >= 10  -- Only include lead sources with at least 10 contacts
 ORDER BY Total_Sales DESC, Total_Appointments DESC;
 
@@ -147,7 +147,7 @@ OPTIMIZATION NOTES:
 5. HAVING clause filters after aggregation for efficiency
 
 RECOMMENDED INDEXES:
-CREATE INDEX idx_lead_src_contact_created ON [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC] (CONTACT_ID, CREATED_DATE);
+CREATE INDEX idx_lead_src_contact_created ON [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC] (CONTACT_ID, CREATE_TMS);
 CREATE INDEX idx_event_contact_date ON [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT] (CONTACT_ID, EVENT_DATE) WHERE APP_TYPE_HANDLE_CD = 'APP_TYPE_HANDLE_CD';
 CREATE INDEX idx_sale_contact_date ON [TaylorMorrisonDWH_Silver].[SILVER_DB].[SALE] (CONTACT_ID, SALE_DATE);
 

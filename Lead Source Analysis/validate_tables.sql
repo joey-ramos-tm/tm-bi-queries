@@ -8,17 +8,17 @@ PRINT '=== LEAD SOURCE TABLE ===';
 SELECT TOP 10
     CONTACT_ID,
     LEAD_SRC_ID,
-    LEAD_SRC_NAME,
-    LEAD_SRC_TYPE,
-    CREATED_DATE
+    LEAD_SRC_NM,
+    LEAD_SRC_TXT,
+    CREATE_TMS
 FROM [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC]
 WHERE CONTACT_ID IS NOT NULL
-ORDER BY CREATED_DATE DESC;
+ORDER BY CREATE_TMS DESC;
 
 PRINT 'Lead Source Record Count:';
 SELECT COUNT(*) AS Total_Records,
        COUNT(DISTINCT CONTACT_ID) AS Unique_Contacts,
-       COUNT(DISTINCT LEAD_SRC_NAME) AS Unique_Lead_Sources
+       COUNT(DISTINCT LEAD_SRC_NM) AS Unique_Lead_Sources
 FROM [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC];
 
 -- 2. Check Event/Appointment table structure
@@ -103,8 +103,8 @@ PRINT 'Sample Contact ID: ' + ISNULL(@SampleContactID, 'None Found');
 SELECT
     'Lead Source' AS Source_Type,
     CONTACT_ID,
-    LEAD_SRC_NAME AS Detail,
-    CREATED_DATE AS Event_Date
+    LEAD_SRC_NM AS Detail,
+    CREATE_TMS AS Event_Date
 FROM [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC]
 WHERE CONTACT_ID = @SampleContactID
 UNION ALL

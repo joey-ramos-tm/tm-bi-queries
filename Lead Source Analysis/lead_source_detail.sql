@@ -9,12 +9,12 @@ WITH FirstLeadSource AS (
     SELECT
         CONTACT_ID,
         LEAD_SRC_ID,
-        LEAD_SRC_NAME,
-        LEAD_SRC_TYPE,
-        CREATED_DATE,
+        LEAD_SRC_NM,
+        LEAD_SRC_TXT,
+        CREATE_TMS,
         ROW_NUMBER() OVER (
             PARTITION BY CONTACT_ID
-            ORDER BY CREATED_DATE ASC
+            ORDER BY CREATE_TMS ASC
         ) AS rn
     FROM [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC]
     WHERE CONTACT_ID IS NOT NULL
@@ -57,9 +57,9 @@ FirstSale AS (
 SELECT
     fls.CONTACT_ID,
     fls.LEAD_SRC_ID,
-    fls.LEAD_SRC_NAME,
-    fls.LEAD_SRC_TYPE,
-    fls.CREATED_DATE AS Lead_Source_Date,
+    fls.LEAD_SRC_NM,
+    fls.LEAD_SRC_TXT,
+    fls.CREATE_TMS AS Lead_Source_Date,
 
     -- Appointment information
     fa.EVENT_ID AS First_Appointment_ID,
@@ -72,9 +72,9 @@ SELECT
     fs.SALE_AMOUNT,
 
     -- Days calculations
-    DATEDIFF(DAY, fls.CREATED_DATE, fa.EVENT_DATE) AS Days_LeadSource_To_Appointment,
+    DATEDIFF(DAY, fls.CREATE_TMS, fa.EVENT_DATE) AS Days_LeadSource_To_Appointment,
     DATEDIFF(DAY, fa.EVENT_DATE, fs.SALE_DATE) AS Days_Appointment_To_Sale,
-    DATEDIFF(DAY, fls.CREATED_DATE, fs.SALE_DATE) AS Days_LeadSource_To_Sale,
+    DATEDIFF(DAY, fls.CREATE_TMS, fs.SALE_DATE) AS Days_LeadSource_To_Sale,
 
     -- Journey stage classification
     CASE
@@ -97,9 +97,9 @@ LEFT JOIN FirstSale fs
 WHERE fls.rn = 1  -- Only first lead source per contact
 
 -- Optional: Add date range filter for recent data
--- AND fls.CREATED_DATE >= DATEADD(MONTH, -12, GETDATE())
+-- AND fls.CREATE_TMS >= DATEADD(MONTH, -12, GETDATE())
 
-ORDER BY fls.CREATED_DATE DESC;
+ORDER BY fls.CREATE_TMS DESC;
 
 /*
 USAGE:

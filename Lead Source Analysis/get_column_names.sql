@@ -1,0 +1,13 @@
+-- Get actual column names from LEAD_SRC table
+SELECT TOP 10 *
+FROM [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC];
+
+-- Get column names and data types
+SELECT
+    COLUMN_NAME,
+    DATA_TYPE,
+    CHARACTER_MAXIMUM_LENGTH
+FROM [TaylorMorrisonDWH_Silver].INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = 'SLS_MKT_VW'
+    AND TABLE_NAME = 'LEAD_SRC'
+ORDER BY ORDINAL_POSITION;
