@@ -453,6 +453,7 @@
                                     <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Division</th>
                                     <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Area</th>
                                     <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Location</th>
+                                    <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Candidate Stage</th>
                                     <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Start Date</th>
                                     <th class="pb-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Target Hire</th>
                                     <th class="pb-2 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Days Open</th>
@@ -460,7 +461,7 @@
                             </thead>
                             <tbody id="criticalTableBody">
                                 <tr>
-                                    <td colspan="9" class="py-4 text-center text-gray-500 text-sm">Loading...</td>
+                                    <td colspan="10" class="py-4 text-center text-gray-500 text-sm">Loading...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -905,11 +906,18 @@
                 const tbody = document.getElementById('criticalTableBody');
 
                 if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9" class="py-4 text-center text-gray-500 text-sm">No critical requisitions found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10" class="py-4 text-center text-gray-500 text-sm">No critical requisitions found</td></tr>';
                     return;
                 }
 
-                tbody.innerHTML = data.slice(0, 5).map(req => `
+                tbody.innerHTML = data.slice(0, 20).map(req => {
+                    // Determine badge class for candidate stage
+                    const stageClass = req.candidate_stage ?
+                        (req.candidate_stage === 'Ready for Hire' || req.candidate_stage === 'Pre-Employment Verification' || req.candidate_stage === 'Employment Agreement' ? 'badge-green' :
+                         req.candidate_stage === 'Offer' || req.candidate_stage === 'Manager Review Complete' || req.candidate_stage === 'Interview' || req.candidate_stage === 'Recruiter Screen' ? 'badge-blue' :
+                         'badge-blue') : '';
+
+                    return `
                     <tr class="border-b border-gray-50 hover:bg-gray-50">
                         <td class="py-2 text-sm font-medium text-gray-900">${req.requisition}</td>
                         <td class="py-2 text-sm text-gray-900">${req.job_title}</td>
@@ -917,13 +925,17 @@
                         <td class="py-2 text-sm text-gray-600">${req.division || 'N/A'}</td>
                         <td class="py-2 text-sm text-gray-600">${req.area || 'N/A'}</td>
                         <td class="py-2 text-sm text-gray-600">${req.location}</td>
+                        <td class="py-2 text-sm text-gray-600">
+                            ${req.candidate_stage ? `<span class="badge ${stageClass}">${req.candidate_stage}</span>` : '<span class="text-gray-400">No candidates</span>'}
+                        </td>
                         <td class="py-2 text-sm text-gray-600">${req.start_date}</td>
                         <td class="py-2 text-sm text-gray-600">${req.target_hire_date || 'N/A'}</td>
                         <td class="py-2 text-sm text-right">
                             <span class="badge badge-red">${req.days_open} days</span>
                         </td>
                     </tr>
-                `).join('');
+                `;
+                }).join('');
             } catch (error) {
                 console.error('Error loading critical table:', error);
             }
