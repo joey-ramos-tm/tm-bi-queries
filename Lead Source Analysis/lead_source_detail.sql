@@ -25,32 +25,32 @@ FirstAppointment AS (
     SELECT
         CONTACT_ID,
         EVENT_ID,
-        EVENT_DATE,
-        EVENT_TYPE,
+        ACTVTY_DT,
+        TYPE_CD,
         ROW_NUMBER() OVER (
             PARTITION BY CONTACT_ID
-            ORDER BY EVENT_DATE ASC
+            ORDER BY ACTVTY_DT ASC
         ) AS rn
     FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
-    WHERE APP_TYPE_HANDLE_CD = 'APP_TYPE_HANDLE_CD'
+    WHERE APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment')
         AND CONTACT_ID IS NOT NULL
-        AND EVENT_DATE IS NOT NULL
+        AND ACTVTY_DT IS NOT NULL
 ),
 
 -- CTE 3: Get sale information per contact
 FirstSale AS (
     SELECT
-        CONTACT_ID,
-        SALE_ID,
-        SALE_DATE,
-        SALE_AMOUNT,
+        AccountId AS CONTACT_ID,
+        QuoteReferenceName AS SALE_ID,
+        ApprovalDate AS SALE_DATE,
+        NetSalesPriceAmount AS SALE_AMOUNT,
         ROW_NUMBER() OVER (
-            PARTITION BY CONTACT_ID
-            ORDER BY SALE_DATE ASC
+            PARTITION BY AccountId
+            ORDER BY ApprovalDate ASC
         ) AS rn
-    FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[SALE]  -- Update with actual sales table
-    WHERE CONTACT_ID IS NOT NULL
-        AND SALE_DATE IS NOT NULL
+    FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail]
+    WHERE AccountId IS NOT NULL
+        AND ApprovalDate IS NOT NULL
 )
 
 -- Detail level output with all contacts and their journey
@@ -63,8 +63,8 @@ SELECT
 
     -- Appointment information
     fa.EVENT_ID AS First_Appointment_ID,
-    fa.EVENT_DATE AS First_Appointment_Date,
-    fa.EVENT_TYPE AS Appointment_Type,
+    fa.ACTVTY_DT AS First_Appointment_Date,
+    fa.TYPE_CD AS Appointment_Type,
 
     -- Sale information
     fs.SALE_ID AS First_Sale_ID,
@@ -72,19 +72,19 @@ SELECT
     fs.SALE_AMOUNT,
 
     -- Days calculations
-    DATEDIFF(DAY, fls.CREATE_TMS, fa.EVENT_DATE) AS Days_LeadSource_To_Appointment,
-    DATEDIFF(DAY, fa.EVENT_DATE, fs.SALE_DATE) AS Days_Appointment_To_Sale,
+    DATEDIFF(DAY, fls.CREATE_TMS, fa.ACTVTY_DT) AS Days_LeadSource_To_Appointment,
+    DATEDIFF(DAY, fa.ACTVTY_DT, fs.SALE_DATE) AS Days_Appointment_To_Sale,
     DATEDIFF(DAY, fls.CREATE_TMS, fs.SALE_DATE) AS Days_LeadSource_To_Sale,
 
     -- Journey stage classification
     CASE
         WHEN fs.SALE_DATE IS NOT NULL THEN 'Converted to Sale'
-        WHEN fa.EVENT_DATE IS NOT NULL THEN 'Had Appointment - No Sale'
+        WHEN fa.ACTVTY_DT IS NOT NULL THEN 'Had Appointment - No Sale'
         ELSE 'Lead Only - No Appointment'
     END AS Journey_Stage,
 
     -- Flags for filtering
-    CASE WHEN fa.EVENT_DATE IS NOT NULL THEN 1 ELSE 0 END AS Had_Appointment,
+    CASE WHEN fa.ACTVTY_DT IS NOT NULL THEN 1 ELSE 0 END AS Had_Appointment,
     CASE WHEN fs.SALE_DATE IS NOT NULL THEN 1 ELSE 0 END AS Had_Sale
 
 FROM FirstLeadSource fls

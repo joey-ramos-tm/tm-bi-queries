@@ -25,33 +25,32 @@ FirstAppointment AS (
     SELECT
         CONTACT_ID,
         EVENT_ID,
-        EVENT_DATE,
-        EVENT_TYPE,
+        ACTVTY_DT,
+        TYPE_CD,
         ROW_NUMBER() OVER (
             PARTITION BY CONTACT_ID
-            ORDER BY EVENT_DATE ASC
+            ORDER BY ACTVTY_DT ASC
         ) AS rn
     FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
-    WHERE APP_TYPE_HANDLE_CD = 'APP_TYPE_HANDLE_CD'
+    WHERE APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment')
         AND CONTACT_ID IS NOT NULL
-        AND EVENT_DATE IS NOT NULL
+        AND ACTVTY_DT IS NOT NULL
 ),
 
 -- CTE 3: Get sale information per contact
--- NOTE: Update this CTE with your actual sales table and columns
 FirstSale AS (
     SELECT
-        CONTACT_ID,
-        SALE_ID,
-        SALE_DATE,
-        SALE_AMOUNT,
+        AccountId AS CONTACT_ID,
+        QuoteReferenceName AS SALE_ID,
+        ApprovalDate AS SALE_DATE,
+        NetSalesPriceAmount AS SALE_AMOUNT,
         ROW_NUMBER() OVER (
-            PARTITION BY CONTACT_ID
-            ORDER BY SALE_DATE ASC
+            PARTITION BY AccountId
+            ORDER BY ApprovalDate ASC
         ) AS rn
-    FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[SALE]  -- Update with actual sales table
-    WHERE CONTACT_ID IS NOT NULL
-        AND SALE_DATE IS NOT NULL
+    FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail]
+    WHERE AccountId IS NOT NULL
+        AND ApprovalDate IS NOT NULL
 ),
 
 -- CTE 4: Combine all data with calculated days
@@ -62,20 +61,20 @@ LeadSourceMetrics AS (
         fls.LEAD_SRC_NM,
         fls.LEAD_SRC_TXT,
         fls.CREATE_TMS AS Lead_Source_Date,
-        fa.EVENT_DATE AS First_Appointment_Date,
+        fa.ACTVTY_DT AS First_Appointment_Date,
         fs.SALE_DATE AS First_Sale_Date,
 
         -- Calculate days from lead source to appointment
         CASE
-            WHEN fa.EVENT_DATE IS NOT NULL
-            THEN DATEDIFF(DAY, fls.CREATE_TMS, fa.EVENT_DATE)
+            WHEN fa.ACTVTY_DT IS NOT NULL
+            THEN DATEDIFF(DAY, fls.CREATE_TMS, fa.ACTVTY_DT)
             ELSE NULL
         END AS Days_LeadSource_To_Appointment,
 
         -- Calculate days from appointment to sale
         CASE
-            WHEN fa.EVENT_DATE IS NOT NULL AND fs.SALE_DATE IS NOT NULL
-            THEN DATEDIFF(DAY, fa.EVENT_DATE, fs.SALE_DATE)
+            WHEN fa.ACTVTY_DT IS NOT NULL AND fs.SALE_DATE IS NOT NULL
+            THEN DATEDIFF(DAY, fa.ACTVTY_DT, fs.SALE_DATE)
             ELSE NULL
         END AS Days_Appointment_To_Sale,
 
@@ -87,7 +86,7 @@ LeadSourceMetrics AS (
         END AS Days_LeadSource_To_Sale,
 
         -- Flags for analysis
-        CASE WHEN fa.EVENT_DATE IS NOT NULL THEN 1 ELSE 0 END AS Had_Appointment,
+        CASE WHEN fa.ACTVTY_DT IS NOT NULL THEN 1 ELSE 0 END AS Had_Appointment,
         CASE WHEN fs.SALE_DATE IS NOT NULL THEN 1 ELSE 0 END AS Had_Sale,
 
         fs.SALE_AMOUNT
@@ -148,12 +147,12 @@ OPTIMIZATION NOTES:
 
 RECOMMENDED INDEXES:
 CREATE INDEX idx_lead_src_contact_created ON [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC] (CONTACT_ID, CREATE_TMS);
-CREATE INDEX idx_event_contact_date ON [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT] (CONTACT_ID, EVENT_DATE) WHERE APP_TYPE_HANDLE_CD = 'APP_TYPE_HANDLE_CD';
-CREATE INDEX idx_sale_contact_date ON [TaylorMorrisonDWH_Silver].[SILVER_DB].[SALE] (CONTACT_ID, SALE_DATE);
+CREATE INDEX idx_event_contact_date ON [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT] (CONTACT_ID, ACTVTY_DT) WHERE APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment');
+CREATE INDEX idx_sale_contact_date ON [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] (AccountId, ApprovalDate) WHERE ApprovalDate IS NOT NULL;
 
 USAGE NOTES:
-- Update the FirstSale CTE with your actual sales table name and column names
-- The APP_TYPE_HANDLE_CD filter may need adjustment based on actual values
+- The APP_TYPE_HANDLE_CD filter includes common appointment types (appointment, In Person Tour, Virtual Tour, Virtual Appointment)
 - Adjust the HAVING clause threshold (currently 10) based on your data volume
 - Consider adding date range filters for recent data analysis
+- Sales are identified by ApprovalDate IS NOT NULL in SaleDetail table
 */

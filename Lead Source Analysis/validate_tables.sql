@@ -26,13 +26,13 @@ PRINT '=== EVENT/APPOINTMENT TABLE ===';
 SELECT TOP 10
     CONTACT_ID,
     EVENT_ID,
-    EVENT_DATE,
-    EVENT_TYPE,
+    ACTVTY_DT,
+    TYPE_CD,
     APP_TYPE_HANDLE_CD
 FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
-WHERE APP_TYPE_HANDLE_CD = 'APP_TYPE_HANDLE_CD'
+WHERE APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment')
     AND CONTACT_ID IS NOT NULL
-ORDER BY EVENT_DATE DESC;
+ORDER BY ACTVTY_DT DESC;
 
 -- Check distinct APP_TYPE_HANDLE_CD values to verify correct filter
 PRINT 'Distinct APP_TYPE_HANDLE_CD values:';
@@ -41,20 +41,24 @@ FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
 GROUP BY APP_TYPE_HANDLE_CD
 ORDER BY Count DESC;
 
--- 3. IMPORTANT: Identify the actual sales table
-PRINT '=== SALES TABLE - NEEDS IDENTIFICATION ===';
-PRINT 'Search for sales-related tables:';
+-- 3. Check Sales table structure
+PRINT '=== SALES TABLE (SaleDetail) ===';
+SELECT TOP 10
+    AccountId,
+    QuoteReferenceName,
+    ApprovalDate,
+    SaleDate,
+    NetSalesPriceAmount,
+    BuyerName
+FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail]
+WHERE ApprovalDate IS NOT NULL
+ORDER BY ApprovalDate DESC;
 
--- List tables in SILVER_DB that might contain sales data
-SELECT
-    TABLE_SCHEMA,
-    TABLE_NAME
-FROM [TaylorMorrisonDWH_Silver].INFORMATION_SCHEMA.TABLES
-WHERE TABLE_NAME LIKE '%SALE%'
-   OR TABLE_NAME LIKE '%CONTRACT%'
-   OR TABLE_NAME LIKE '%ORDER%'
-   OR TABLE_NAME LIKE '%TRANSACTION%'
-ORDER BY TABLE_NAME;
+PRINT 'Sales Record Count:';
+SELECT COUNT(*) AS Total_Sales,
+       COUNT(DISTINCT AccountId) AS Unique_Accounts
+FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail]
+WHERE ApprovalDate IS NOT NULL;
 
 -- 4. Check for contacts that exist in multiple tables
 PRINT '=== DATA OVERLAP CHECK ===';
@@ -66,8 +70,13 @@ WITH LeadContacts AS (
 AppointmentContacts AS (
     SELECT DISTINCT CONTACT_ID
     FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
-    WHERE APP_TYPE_HANDLE_CD = 'APP_TYPE_HANDLE_CD'
+    WHERE APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment')
         AND CONTACT_ID IS NOT NULL
+),
+SaleContacts AS (
+    SELECT DISTINCT AccountId AS CONTACT_ID
+    FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail]
+    WHERE ApprovalDate IS NOT NULL
 )
 SELECT
     'Contacts with Lead Source' AS Category,
@@ -80,21 +89,42 @@ SELECT
 FROM AppointmentContacts
 UNION ALL
 SELECT
-    'Contacts with Both' AS Category,
+    'Contacts with Sales' AS Category,
+    COUNT(*) AS Count
+FROM SaleContacts
+UNION ALL
+SELECT
+    'Contacts with Lead + Appointment' AS Category,
     COUNT(*) AS Count
 FROM LeadContacts lc
-INNER JOIN AppointmentContacts ac ON lc.CONTACT_ID = ac.CONTACT_ID;
+INNER JOIN AppointmentContacts ac ON lc.CONTACT_ID = ac.CONTACT_ID
+UNION ALL
+SELECT
+    'Contacts with Lead + Sale' AS Category,
+    COUNT(*) AS Count
+FROM LeadContacts lc
+INNER JOIN SaleContacts sc ON lc.CONTACT_ID = sc.CONTACT_ID
+UNION ALL
+SELECT
+    'Contacts with All Three' AS Category,
+    COUNT(*) AS Count
+FROM LeadContacts lc
+INNER JOIN AppointmentContacts ac ON lc.CONTACT_ID = ac.CONTACT_ID
+INNER JOIN SaleContacts sc ON lc.CONTACT_ID = sc.CONTACT_ID;
 
 -- 5. Sample journey for one contact
 PRINT '=== SAMPLE CONTACT JOURNEY ===';
 DECLARE @SampleContactID VARCHAR(50);
 
--- Get a contact that has both lead source and appointment
+-- Get a contact that has lead source, appointment, and sale
 SELECT TOP 1 @SampleContactID = ls.CONTACT_ID
 FROM [TaylorMorrisonDWH_Silver].[SLS_MKT_VW].[LEAD_SRC] ls
 INNER JOIN [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT] e
     ON ls.CONTACT_ID = e.CONTACT_ID
-WHERE e.APP_TYPE_HANDLE_CD = 'APP_TYPE_HANDLE_CD'
+INNER JOIN [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail] s
+    ON ls.CONTACT_ID = s.AccountId
+WHERE e.APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment')
+    AND s.ApprovalDate IS NOT NULL
     AND ls.CONTACT_ID IS NOT NULL;
 
 PRINT 'Sample Contact ID: ' + ISNULL(@SampleContactID, 'None Found');
@@ -112,21 +142,28 @@ UNION ALL
 SELECT
     'Appointment' AS Source_Type,
     CONTACT_ID,
-    EVENT_TYPE AS Detail,
-    EVENT_DATE AS Event_Date
+    TYPE_CD AS Detail,
+    ACTVTY_DT AS Event_Date
 FROM [TaylorMorrisonDWH_Silver].[SILVER_DB].[EVENT]
 WHERE CONTACT_ID = @SampleContactID
-    AND APP_TYPE_HANDLE_CD = 'APP_TYPE_HANDLE_CD'
+    AND APP_TYPE_HANDLE_CD IN ('appointment', 'In Person Tour', 'Virtual Tour', 'Virtual Appointment')
+UNION ALL
+-- Show sales for sample contact
+SELECT
+    'Sale' AS Source_Type,
+    AccountId AS CONTACT_ID,
+    QuoteReferenceName AS Detail,
+    ApprovalDate AS Event_Date
+FROM [TaylorMorrisonDWH_Gold].[Sales].[SaleDetail]
+WHERE AccountId = @SampleContactID
+    AND ApprovalDate IS NOT NULL
 ORDER BY Event_Date;
 
 /*
-ACTION ITEMS AFTER RUNNING THIS SCRIPT:
-1. Verify CONTACT_ID links correctly between tables
-2. Note the actual values of APP_TYPE_HANDLE_CD (if different from placeholder)
-3. Identify the correct sales table from the list returned
-4. Check sales table structure and determine column names:
-   - Contact/Account ID column
-   - Sale Date column
-   - Sale Amount column
-5. Update the main analysis queries with correct table/column names
+VALIDATION RESULTS:
+1. LEAD_SRC table uses CONTACT_ID for linking
+2. EVENT table uses CONTACT_ID and ACTVTY_DT for appointment dates
+3. SaleDetail table uses AccountId for linking and ApprovalDate IS NOT NULL identifies sales
+4. APP_TYPE_HANDLE_CD values include: appointment, In Person Tour, Virtual Tour, Virtual Appointment
+5. All three tables are now properly configured in the analysis queries
 */
