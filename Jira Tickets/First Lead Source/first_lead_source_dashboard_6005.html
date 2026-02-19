@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>First Lead Source by Period</title>
+    <style>
+        /* Import DIN font for numbers and KPIs */
+        @import url('https://fonts.cdnfonts.com/css/din-2014');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #FFFFFF;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0;
+            background: white;
+        }
+
+        .header {
+            background: white;
+            padding: 24px 40px;
+            border-bottom: 2px solid #0060AE;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .header h1 {
+            color: #0060AE;
+            font-size: 2rem;
+            margin: 0;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-link {
+            color: #0060AE;
+            text-decoration: none;
+            padding: 10px 18px;
+            border: 1px solid #0060AE;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .nav-link:hover {
+            background: #0060AE;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,96,174,0.3);
+        }
+
+        .controls {
+            background: #F8F9FA;
+            padding: 20px 40px;
+            border-bottom: 1px solid #E0E0E0;
+        }
+
+        .period-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .period-btn {
+            background: white;
+            color: #424242;
+            border: 1px solid #BDBDBD;
+            padding: 10px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .period-btn:hover {
+            background: #F5F5F5;
+            border-color: #0060AE;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .period-btn.active {
+            background: #0060AE;
+            color: white;
+            border-color: #0060AE;
+            box-shadow: 0 2px 4px rgba(0,96,174,0.3);
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-group label {
+            font-size: 0.9rem;
+            color: #424242;
+            font-weight: 600;
+        }
+
+        .filter-group select {
+            padding: 8px 14px;
+            border: 1px solid #BDBDBD;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            min-width: 150px;
+            background: white;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .filter-group select:hover {
+            border-color: #0060AE;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: #0060AE;
+            box-shadow: 0 0 0 3px rgba(0,96,174,0.1);
+        }
+
+        .filter-group input[type="date"] {
+            padding: 8px 14px;
+            border: 1px solid #BDBDBD;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            background: white;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .filter-group input[type="date"]:hover {
+            border-color: #0060AE;
+        }
+
+        .filter-group input[type="date"]:focus {
+            outline: none;
+            border-color: #0060AE;
+            box-shadow: 0 0 0 3px rgba(0,96,174,0.1);
+        }
+
+        .table-container {
+            padding: 0;
+            overflow-x: auto;
+            background: white;
+            margin: 20px 0;
+        }
+
+        .table-header {
+            background: #0060AE;
+            color: white;
+            padding: 18px 40px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: left;
+            letter-spacing: -0.3px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: #0060AE;
+            color: white;
+            padding: 14px 12px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-right: 1px solid #0078D4;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        th:first-child {
+            text-align: left;
+            padding-left: 40px;
+        }
+
+        th:last-child {
+            border-right: none;
+        }
+
+        td {
+            padding: 12px 12px;
+            border-bottom: 1px solid #E8E8E8;
+            text-align: center;
+        }
+
+        td:first-child {
+            text-align: left;
+            padding-left: 40px;
+            font-weight: 500;
+        }
+
+        tr:hover {
+            background: #F0F4F8;
+            transition: background-color 0.15s ease;
+        }
+
+        tr:nth-child(even) {
+            background: #FAFBFC;
+        }
+
+        tr:nth-child(even):hover {
+            background: #F0F4F8;
+        }
+
+        .lead-source-col {
+            color: #0066cc;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .lead-source-col:hover {
+            text-decoration: underline;
+        }
+
+        .number-col {
+            text-align: center;
+            font-family: 'DIN 2014', 'Segoe UI', sans-serif;
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .percent-col {
+            text-align: center;
+            font-family: 'DIN 2014', 'Segoe UI', sans-serif;
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .footer {
+            background: white;
+            padding: 20px 40px;
+            border-top: 1px solid #E0E0E0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.03);
+        }
+
+        .footer-left {
+            color: #757575;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .footer-right {
+            color: #757575;
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0,0,0,0.1);
+            border-top: 4px solid #0060AE;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 5px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .refresh-btn {
+            background: #0060AE;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-left: 15px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,96,174,0.3);
+        }
+
+        .refresh-btn:hover {
+            background: #004A8F;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,96,174,0.4);
+        }
+
+        .refresh-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0,96,174,0.3);
+        }
+
+        .refresh-btn:disabled {
+            background: #BDBDBD;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .period-buttons {
+                flex-wrap: wrap;
+            }
+
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-group {
+                width: 100%;
+            }
+
+            .filter-group select {
+                width: 100%;
+            }
+
+            table {
+                font-size: 0.75rem;
+            }
+
+            th, td {
+                padding: 6px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>First Lead Source by Period</h1>
+            <div class="nav-links">
+                <a href="first_lead_source_dashboard_6005.html" class="nav-link" style="background: #0060AE; color: white;">Period View</a>
+                <a href="first_lead_source_dashboard_6005_page2.html" class="nav-link">Date Range View</a>
+                <a href="first_lead_source_dashboard_6005_page3.html" class="nav-link">Scatter Plots</a>
+            </div>
+        </div>
+
+        <!-- Controls: Period Buttons + Filters -->
+        <div class="controls">
+            <div class="period-buttons">
+                <button class="period-btn active" data-period="mtd">MTD</button>
+                <button class="period-btn" data-period="prior-month">Prior Month</button>
+                <button class="period-btn" data-period="qtd">QTD</button>
+                <button class="period-btn" data-period="prior-qtr">Prior QTR</button>
+                <button class="period-btn" data-period="ytd">YTD</button>
+                <button class="period-btn" data-period="prior-year">Prior Year</button>
+            </div>
+
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Custom Date Range:</label>
+                    <input type="date" id="startDate" />
+                    <label>to</label>
+                    <input type="date" id="endDate" />
+                    <button class="refresh-btn" onclick="applyCustomDateRange()" id="customDateBtn">
+                        Apply
+                    </button>
+                </div>
+                <div class="filter-group">
+                    <label>Area, Division, Community</label>
+                    <select id="filterArea">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <button class="refresh-btn" onclick="refreshData()" id="refreshBtn">
+                    Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+            <p>Loading dashboard data...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" style="display: none;">
+            <div class="error-message">
+                <strong>Error loading dashboard data</strong>
+                <p id="errorMessage"></p>
+            </div>
+        </div>
+
+        <!-- Main Table -->
+        <div id="dashboardContent" style="display: none;">
+            <div class="table-header">
+                First Lead Source by Period
+            </div>
+            <div class="table-container">
+                <table id="leadSourceTable">
+                    <thead>
+                        <tr>
+                            <th>First Lead Source</th>
+                            <th class="number-col"># of Leads</th>
+                            <th class="number-col"># of First<br>Appointments</th>
+                            <th class="percent-col">Leads to First Appt<br>Conversion</th>
+                            <th class="number-col"># of Days First<br>Lead to First Appt</th>
+                            <th class="number-col"># of First<br>Gross Sales</th>
+                            <th class="percent-col">Leads to First Gross<br>Sale Conversion</th>
+                            <th class="number-col"># of Days First Lead<br>to First Gross Sale</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Data will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                <div class="footer-left">
+                    First Lead Source
+                </div>
+                <div class="footer-right" id="lastUpdated">
+                    Data Last Refreshed: --
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = 'http://localhost:6005/api';
+        const AUTO_REFRESH_INTERVAL = 300000; // 5 minutes
+
+        let currentData = [];
+        let currentPeriod = 'mtd';
+        let autoRefreshTimer = null;
+
+        // ========================================================================
+        // INITIALIZATION
+        // ========================================================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard initializing...');
+            setupEventListeners();
+            initDashboard();
+
+            // Set up auto-refresh
+            autoRefreshTimer = setInterval(refreshData, AUTO_REFRESH_INTERVAL);
+        });
+
+        function setupEventListeners() {
+            // Period buttons
+            document.querySelectorAll('.period-btn').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentPeriod = this.dataset.period;
+
+                    // Clear custom date inputs when using period buttons
+                    document.getElementById('startDate').value = '';
+                    document.getElementById('endDate').value = '';
+
+                    // Show loading and fetch data for the selected period
+                    showLoading();
+                    try {
+                        await loadDashboardData(currentPeriod);
+                        hideLoading();
+                    } catch (error) {
+                        showError(error.message);
+                    }
+                });
+            });
+
+            // Filter dropdown
+            document.getElementById('filterArea').addEventListener('change', function() {
+                updateTableWithFilters();
+            });
+        }
+
+        async function initDashboard() {
+            try {
+                showLoading();
+                // Load data with default period (MTD)
+                await loadDashboardData(currentPeriod);
+                hideLoading();
+            } catch (error) {
+                console.error('Failed to initialize dashboard:', error);
+                showError(error.message);
+            }
+        }
+
+        // ========================================================================
+        // DATA LOADING
+        // ========================================================================
+
+        async function loadDashboardData(period = null, startDate = null, endDate = null) {
+            try {
+                let url = `${API_BASE}/all`;
+                const params = [];
+
+                if (period) {
+                    params.push(`period=${period}`);
+                } else if (startDate || endDate) {
+                    if (startDate) params.push(`start_date=${startDate}`);
+                    if (endDate) params.push(`end_date=${endDate}`);
+                }
+
+                if (params.length > 0) {
+                    url += `?${params.join('&')}`;
+                }
+
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                console.log('Dashboard data loaded:', data);
+                console.log('Filter applied:', data.filterApplied);
+
+                currentData = data.leadSources || [];
+                updateTable(currentData);
+                updateLastUpdated(data.lastUpdated);
+
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                throw error;
+            }
+        }
+
+        async function refreshData() {
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            btn.textContent = 'Refreshing...';
+
+            try {
+                // Reload data with current period filter
+                await loadDashboardData(currentPeriod);
+            } catch (error) {
+                console.error('Error refreshing dashboard:', error);
+                showError(error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Refresh';
+            }
+        }
+
+        async function applyCustomDateRange() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            if (!startDate && !endDate) {
+                alert('Please select at least one date (start or end)');
+                return;
+            }
+
+            // Clear period button selection
+            document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+            currentPeriod = null;
+
+            // Show loading and fetch data
+            showLoading();
+            try {
+                await loadDashboardData(null, startDate, endDate);
+                hideLoading();
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        // ========================================================================
+        // TABLE UPDATE FUNCTIONS
+        // ========================================================================
+
+        function updateTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px;">No data available</td></tr>';
+                return;
+            }
+
+            data.forEach(source => {
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+                    <td class="lead-source-col">${source.leadSource || 'Unknown'}</td>
+                    <td class="number-col">${formatNumber(source.numLeads)}</td>
+                    <td class="number-col">${formatNumber(source.numAppointments)}</td>
+                    <td class="percent-col">${source.apptConversion}%</td>
+                    <td class="number-col">${source.avgDaysToAppt > 0 ? source.avgDaysToAppt : '-'}</td>
+                    <td class="number-col">${formatNumber(source.numSales)}</td>
+                    <td class="percent-col">${source.saleConversion}%</td>
+                    <td class="number-col">${source.avgDaysToSale > 0 ? source.avgDaysToSale : '-'}</td>
+                `;
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateTableWithFilters() {
+            // For now, just update with current data
+            // Period filtering would require date-filtered data from API
+            updateTable(currentData);
+        }
+
+        function updateLastUpdated(timestamp) {
+            const elem = document.getElementById('lastUpdated');
+            if (timestamp) {
+                elem.textContent = `Data Last Refreshed: ${timestamp}`;
+            }
+        }
+
+        // ========================================================================
+        // UTILITY FUNCTIONS
+        // ========================================================================
+
+        function formatNumber(num) {
+            if (num === null || num === undefined) return '-';
+            return num.toLocaleString();
+        }
+
+        function showLoading() {
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('errorState').style.display = 'none';
+            document.getElementById('dashboardContent').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('dashboardContent').style.display = 'block';
+        }
+
+        function showError(message) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('dashboardContent').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+            }
+        });
+    </script>
+</body>
+</html>

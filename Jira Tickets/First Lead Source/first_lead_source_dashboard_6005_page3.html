@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>First Lead Source Scatter Plots</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Import DIN font for numbers and KPIs */
+        @import url('https://fonts.cdnfonts.com/css/din-2014');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #FFFFFF;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0;
+            background: white;
+        }
+
+        .header {
+            background: white;
+            padding: 24px 40px;
+            border-bottom: 2px solid #0060AE;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .header h1 {
+            color: #0060AE;
+            font-size: 2rem;
+            margin: 0;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-link {
+            color: #0060AE;
+            text-decoration: none;
+            padding: 10px 18px;
+            border: 1px solid #0060AE;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .nav-link:hover {
+            background: #0060AE;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,96,174,0.3);
+        }
+
+        .controls {
+            background: #F8F9FA;
+            padding: 20px 40px;
+            border-bottom: 1px solid #E0E0E0;
+        }
+
+        .date-range-section {
+            background: #4a5568;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .date-range-section label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .date-inputs {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .date-inputs input[type="date"] {
+            padding: 8px 14px;
+            border: 1px solid #BDBDBD;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            background: white;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .date-inputs input[type="date"]:hover {
+            border-color: #0060AE;
+        }
+
+        .date-inputs input[type="date"]:focus {
+            outline: none;
+            border-color: #0060AE;
+            box-shadow: 0 0 0 3px rgba(0,96,174,0.1);
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .filter-section {
+            background: #4a5568;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .filter-section label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .filter-section select {
+            padding: 8px 14px;
+            border: 1px solid #BDBDBD;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            width: 100%;
+            background: white;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .filter-section select:hover {
+            border-color: #0060AE;
+        }
+
+        .filter-section select:focus {
+            outline: none;
+            border-color: #0060AE;
+            box-shadow: 0 0 0 3px rgba(0,96,174,0.1);
+        }
+
+        .apply-btn {
+            background: #0060AE;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-left: 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,96,174,0.3);
+        }
+
+        .apply-btn:hover {
+            background: #004A8F;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,96,174,0.4);
+        }
+
+        .apply-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0,96,174,0.3);
+        }
+
+        .apply-btn:disabled {
+            background: #BDBDBD;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .charts-container {
+            padding: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            background: white;
+        }
+
+        .chart-wrapper {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #E0E0E0;
+        }
+
+        .chart-header {
+            background: #0060AE;
+            color: white;
+            padding: 14px 24px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-align: left;
+            border-radius: 4px 4px 0 0;
+            margin: -24px -24px 24px -24px;
+            letter-spacing: -0.3px;
+        }
+
+        .chart-subtitle {
+            color: #757575;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .chart-canvas {
+            position: relative;
+            height: 500px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid rgba(0,0,0,0.1);
+            border-top: 4px solid #0060AE;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 5px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .footer {
+            background: white;
+            padding: 20px 40px;
+            border-top: 1px solid #E0E0E0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.03);
+        }
+
+        .footer-left {
+            color: #757575;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .footer-right {
+            color: #757575;
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .date-inputs {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-section {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>First Lead Source Scatter Plots</h1>
+            <div class="nav-links">
+                <a href="first_lead_source_dashboard_6005.html" class="nav-link">Period View</a>
+                <a href="first_lead_source_dashboard_6005_page2.html" class="nav-link">Date Range View</a>
+                <a href="first_lead_source_dashboard_6005_page3.html" class="nav-link" style="background: #0060AE; color: white;">Scatter Plots</a>
+            </div>
+        </div>
+
+        <!-- Controls: Date Range + Filters -->
+        <div class="controls">
+            <div class="date-range-section">
+                <label>Date Range</label>
+                <div class="date-inputs">
+                    <input type="date" id="startDate" value="2024-01-01" />
+                    <span style="color: white;">to</span>
+                    <input type="date" id="endDate" />
+                    <button class="apply-btn" onclick="applyFilters()" id="applyBtn">
+                        Apply
+                    </button>
+                </div>
+            </div>
+
+            <div class="filters">
+                <div class="filter-section">
+                    <label>Area, Division, Community</label>
+                    <select id="filterArea">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div class="filter-section">
+                    <label>First Lead Source</label>
+                    <select id="filterLeadSource">
+                        <option value="">All</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading">
+            <div class="spinner"></div>
+            <p>Loading scatter plot data...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" style="display: none;">
+            <div class="error-message">
+                <strong>Error loading data</strong>
+                <p id="errorMessage"></p>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div id="chartsContent" style="display: none;">
+            <div class="charts-container">
+                <!-- Leads to First Appt Conversion -->
+                <div class="chart-wrapper">
+                    <div class="chart-header">
+                        First Lead Source by Period
+                    </div>
+                    <div class="chart-subtitle">
+                        Leads to First Appt Conversion  0.0% ━━━━━━ 100.0%
+                    </div>
+                    <div class="chart-canvas">
+                        <canvas id="apptConversionChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Leads to First Gross Sale Conversion -->
+                <div class="chart-wrapper">
+                    <div class="chart-header">
+                        First Lead Source by Period
+                    </div>
+                    <div class="chart-subtitle">
+                        Leads to First Gross Sale Conversion  0.0% ━━━━━━ 100.0%
+                    </div>
+                    <div class="chart-canvas">
+                        <canvas id="saleConversionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                <div class="footer-left">
+                    First Lead Source
+                </div>
+                <div class="footer-right" id="lastUpdated">
+                    Data Last Refreshed: --
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = 'http://localhost:6005/api';
+
+        let apptChart = null;
+        let saleChart = null;
+        let allData = [];
+
+        // ========================================================================
+        // INITIALIZATION
+        // ========================================================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Scatter plots initializing...');
+
+            // Set default end date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('endDate').value = today;
+
+            initDashboard();
+        });
+
+        async function initDashboard() {
+            try {
+                showLoading();
+                await loadData();
+                hideLoading();
+            } catch (error) {
+                console.error('Failed to initialize dashboard:', error);
+                showError(error.message);
+            }
+        }
+
+        // ========================================================================
+        // DATA LOADING
+        // ========================================================================
+
+        async function loadData(startDate = null, endDate = null) {
+            try {
+                let url = `${API_BASE}/all`;
+                const params = [];
+
+                // Use dates from inputs if not provided
+                if (!startDate) startDate = document.getElementById('startDate').value;
+                if (!endDate) endDate = document.getElementById('endDate').value;
+
+                if (startDate) params.push(`start_date=${startDate}`);
+                if (endDate) params.push(`end_date=${endDate}`);
+
+                if (params.length > 0) {
+                    url += `?${params.join('&')}`;
+                }
+
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                console.log('Data loaded:', data);
+
+                allData = data.leadSources || [];
+                populateLeadSourceFilter(allData);
+                updateCharts(allData);
+                updateLastUpdated(data.lastUpdated);
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                throw error;
+            }
+        }
+
+        function populateLeadSourceFilter(data) {
+            const select = document.getElementById('filterLeadSource');
+            const currentValue = select.value;
+
+            // Get unique lead sources
+            const sources = [...new Set(data.map(d => d.leadSource))].sort();
+
+            select.innerHTML = '<option value="">All</option>';
+            sources.forEach(source => {
+                const option = document.createElement('option');
+                option.value = source;
+                option.textContent = source;
+                select.appendChild(option);
+            });
+
+            // Restore previous selection if it exists
+            if (currentValue && sources.includes(currentValue)) {
+                select.value = currentValue;
+            }
+        }
+
+        async function applyFilters() {
+            const btn = document.getElementById('applyBtn');
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+
+            showLoading();
+            try {
+                await loadData();
+                hideLoading();
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Apply';
+            }
+        }
+
+        // ========================================================================
+        // CHART FUNCTIONS
+        // ========================================================================
+
+        function updateCharts(data) {
+            // Filter data if lead source is selected
+            const selectedSource = document.getElementById('filterLeadSource').value;
+            let filteredData = data;
+
+            if (selectedSource) {
+                filteredData = data.filter(d => d.leadSource === selectedSource);
+            }
+
+            // Prepare data for charts
+            const apptData = filteredData.map(d => ({
+                x: d.numLeads,
+                y: d.numAppointments,
+                r: Math.sqrt(d.numLeads) / 2 + 5, // Bubble size based on # of leads
+                label: d.leadSource,
+                conversion: d.apptConversion
+            }));
+
+            const saleData = filteredData.map(d => ({
+                x: d.numLeads,
+                y: d.numSales,
+                r: Math.sqrt(d.numLeads) / 2 + 5, // Bubble size based on # of leads
+                label: d.leadSource,
+                conversion: d.saleConversion
+            }));
+
+            // Create or update Appointment Conversion chart
+            createApptConversionChart(apptData);
+
+            // Create or update Sale Conversion chart
+            createSaleConversionChart(saleData);
+        }
+
+        function createApptConversionChart(data) {
+            const ctx = document.getElementById('apptConversionChart').getContext('2d');
+
+            if (apptChart) {
+                apptChart.destroy();
+            }
+
+            apptChart = new Chart(ctx, {
+                type: 'bubble',
+                data: {
+                    datasets: [{
+                        label: 'Lead Sources',
+                        data: data,
+                        backgroundColor: data.map((d, i) => {
+                            const colors = [
+                                'rgba(244, 162, 97, 0.6)',
+                                'rgba(233, 196, 106, 0.6)',
+                                'rgba(42, 157, 143, 0.6)',
+                                'rgba(38, 70, 83, 0.6)',
+                                'rgba(231, 111, 81, 0.6)',
+                                'rgba(189, 189, 189, 0.6)'
+                            ];
+                            return colors[i % colors.length];
+                        }),
+                        borderColor: data.map((d, i) => {
+                            const colors = [
+                                'rgba(244, 162, 97, 1)',
+                                'rgba(233, 196, 106, 1)',
+                                'rgba(42, 157, 143, 1)',
+                                'rgba(38, 70, 83, 1)',
+                                'rgba(231, 111, 81, 1)',
+                                'rgba(189, 189, 189, 1)'
+                            ];
+                            return colors[i % colors.length];
+                        }),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const point = context.raw;
+                                    return [
+                                        `${point.label}`,
+                                        `# of Leads: ${point.x.toLocaleString()}`,
+                                        `# of Appointments: ${point.y.toLocaleString()}`,
+                                        `Conversion: ${point.conversion}%`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '# of Leads',
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value >= 1000 ? (value/1000) + 'k' : value;
+                                }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '# of First Appointments',
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value >= 1000 ? (value/1000) + 'k' : value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createSaleConversionChart(data) {
+            const ctx = document.getElementById('saleConversionChart').getContext('2d');
+
+            if (saleChart) {
+                saleChart.destroy();
+            }
+
+            saleChart = new Chart(ctx, {
+                type: 'bubble',
+                data: {
+                    datasets: [{
+                        label: 'Lead Sources',
+                        data: data,
+                        backgroundColor: data.map((d, i) => {
+                            const colors = [
+                                'rgba(244, 162, 97, 0.6)',
+                                'rgba(233, 196, 106, 0.6)',
+                                'rgba(42, 157, 143, 0.6)',
+                                'rgba(38, 70, 83, 0.6)',
+                                'rgba(231, 111, 81, 0.6)',
+                                'rgba(189, 189, 189, 0.6)'
+                            ];
+                            return colors[i % colors.length];
+                        }),
+                        borderColor: data.map((d, i) => {
+                            const colors = [
+                                'rgba(244, 162, 97, 1)',
+                                'rgba(233, 196, 106, 1)',
+                                'rgba(42, 157, 143, 1)',
+                                'rgba(38, 70, 83, 1)',
+                                'rgba(231, 111, 81, 1)',
+                                'rgba(189, 189, 189, 1)'
+                            ];
+                            return colors[i % colors.length];
+                        }),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const point = context.raw;
+                                    return [
+                                        `${point.label}`,
+                                        `# of Leads: ${point.x.toLocaleString()}`,
+                                        `# of Gross Sales: ${point.y.toLocaleString()}`,
+                                        `Conversion: ${point.conversion}%`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: '# of Leads',
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value >= 1000 ? (value/1000) + 'k' : value;
+                                }
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: '# of First Gross Sales',
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return value >= 1000 ? (value/1000) + 'k' : value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Event listener for lead source filter
+        document.getElementById('filterLeadSource').addEventListener('change', function() {
+            updateCharts(allData);
+        });
+
+        function updateLastUpdated(timestamp) {
+            const elem = document.getElementById('lastUpdated');
+            if (timestamp) {
+                elem.textContent = `Data Last Refreshed: ${timestamp}`;
+            }
+        }
+
+        // ========================================================================
+        // UTILITY FUNCTIONS
+        // ========================================================================
+
+        function showLoading() {
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('errorState').style.display = 'none';
+            document.getElementById('chartsContent').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('chartsContent').style.display = 'block';
+        }
+
+        function showError(message) {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('chartsContent').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+        }
+    </script>
+</body>
+</html>
