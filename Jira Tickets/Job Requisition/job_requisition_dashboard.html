@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Requisition Dashboard | Taylor Morrison</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            color: #718096;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .last-updated {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 5px;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-title {
+            color: #718096;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .card-value {
+            color: #2d3748;
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .card-subtitle {
+            color: #a0aec0;
+            font-size: 12px;
+        }
+
+        .card.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .card.primary .card-title,
+        .card.primary .card-value,
+        .card.primary .card-subtitle {
+            color: white;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-container.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .chart-title {
+            color: #2d3748;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        .canvas-wrapper.tall {
+            height: 400px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th {
+            background: #f7fafc;
+            padding: 12px;
+            text-align: left;
+            color: #2d3748;
+            font-weight: 600;
+            font-size: 13px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+            color: #4a5568;
+        }
+
+        tr:hover {
+            background: #f7fafc;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge.critical {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .badge.warning {
+            background: #feebc8;
+            color: #c05621;
+        }
+
+        .badge.success {
+            background: #c6f6d5;
+            color: #2f855a;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+
+        .spinner {
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fed7d7;
+            color: #c53030;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        @media (max-width: 1200px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>📊 Job Requisition Dashboard</h1>
+                <div class="subtitle">Open Positions Tracking | Taylor Morrison</div>
+                <div class="last-updated" id="lastUpdated">Loading...</div>
+            </div>
+            <button class="refresh-btn" onclick="refreshData()">🔄 Refresh Data</button>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards" id="summaryCards">
+            <div class="card primary">
+                <div class="card-title">Total Open Requisitions</div>
+                <div class="card-value" id="totalOpen">-</div>
+                <div class="card-subtitle">Actively hiring</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Total Positions</div>
+                <div class="card-value" id="totalPositions">-</div>
+                <div class="card-subtitle">Openings to fill</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Average Days Open</div>
+                <div class="card-value" id="avgDays">-</div>
+                <div class="card-subtitle">Avg time to fill</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Departments</div>
+                <div class="card-value" id="departments">-</div>
+                <div class="card-subtitle">With open positions</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Locations</div>
+                <div class="card-value" id="locations">-</div>
+                <div class="card-subtitle">Hiring across</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Longest Open</div>
+                <div class="card-value" id="maxDays">-</div>
+                <div class="card-subtitle">Days</div>
+            </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid">
+            <!-- Aging Analysis -->
+            <div class="chart-container">
+                <div class="chart-title">Aging Analysis</div>
+                <div class="canvas-wrapper">
+                    <canvas id="agingChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Requisition Reasons -->
+            <div class="chart-container">
+                <div class="chart-title">Requisition Reasons</div>
+                <div class="canvas-wrapper">
+                    <canvas id="reasonsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Department Breakdown -->
+            <div class="chart-container">
+                <div class="chart-title">Top 10 Departments</div>
+                <div class="canvas-wrapper">
+                    <canvas id="departmentChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Location Breakdown -->
+            <div class="chart-container">
+                <div class="chart-title">Top 10 Locations</div>
+                <div class="canvas-wrapper">
+                    <canvas id="locationChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Monthly Trend -->
+            <div class="chart-container full-width">
+                <div class="chart-title">Monthly Trend (Last 12 Months)</div>
+                <div class="canvas-wrapper">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Hiring Manager Workload -->
+            <div class="chart-container full-width">
+                <div class="chart-title">Hiring Manager Workload (Top 10)</div>
+                <div class="canvas-wrapper">
+                    <canvas id="managerChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Critical Requisitions Table -->
+            <div class="chart-container full-width">
+                <div class="chart-title">Critical Requisitions (90+ Days Open)</div>
+                <div id="criticalTable">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading data...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8008/api';
+        let charts = {};
+
+        // Initialize dashboard
+        async function initDashboard() {
+            try {
+                showLoading();
+                const response = await fetch(`${API_BASE}/all`);
+                const data = await response.json();
+
+                updateSummaryCards(data.summary);
+                createAgingChart(data.aging);
+                createReasonsChart(data.reasons);
+                createDepartmentChart(data.departments);
+                createLocationChart(data.locations);
+                createTrendChart(data.trend);
+                createManagerChart(data.managers);
+                createCriticalTable(data.critical);
+
+                updateLastUpdated();
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                showError('Failed to load dashboard data. Please ensure the API is running on port 5001.');
+            }
+        }
+
+        // Update summary cards
+        function updateSummaryCards(summary) {
+            document.getElementById('totalOpen').textContent = summary.total_open.toLocaleString();
+            document.getElementById('totalPositions').textContent = summary.total_positions.toLocaleString();
+            document.getElementById('avgDays').textContent = summary.avg_days_open.toFixed(1);
+            document.getElementById('departments').textContent = summary.departments;
+            document.getElementById('locations').textContent = summary.locations;
+            document.getElementById('maxDays').textContent = summary.max_days_open;
+        }
+
+        // Create Aging Chart
+        function createAgingChart(data) {
+            const ctx = document.getElementById('agingChart').getContext('2d');
+            if (charts.aging) charts.aging.destroy();
+
+            const colors = ['#48bb78', '#38b2ac', '#4299e1', '#ed8936', '#f56565'];
+
+            charts.aging = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.category),
+                    datasets: [{
+                        label: 'Requisitions',
+                        data: data.map(d => d.count),
+                        backgroundColor: colors,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create Reasons Chart
+        function createReasonsChart(data) {
+            const ctx = document.getElementById('reasonsChart').getContext('2d');
+            if (charts.reasons) charts.reasons.destroy();
+
+            charts.reasons = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(d => d.reason),
+                    datasets: [{
+                        data: data.map(d => d.count),
+                        backgroundColor: [
+                            '#667eea', '#764ba2', '#f093fb', '#4facfe',
+                            '#43e97b', '#fa709a', '#fee140', '#30cfd0'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 15, font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create Department Chart
+        function createDepartmentChart(data) {
+            const ctx = document.getElementById('departmentChart').getContext('2d');
+            if (charts.department) charts.department.destroy();
+
+            charts.department = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.department),
+                    datasets: [{
+                        label: 'Open Positions',
+                        data: data.map(d => d.count),
+                        backgroundColor: '#667eea',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create Location Chart
+        function createLocationChart(data) {
+            const ctx = document.getElementById('locationChart').getContext('2d');
+            if (charts.location) charts.location.destroy();
+
+            charts.location = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.location),
+                    datasets: [{
+                        label: 'Open Positions',
+                        data: data.map(d => d.count),
+                        backgroundColor: '#764ba2',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create Trend Chart
+        function createTrendChart(data) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            if (charts.trend) charts.trend.destroy();
+
+            charts.trend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.month),
+                    datasets: [
+                        {
+                            label: 'Created',
+                            data: data.map(d => d.created),
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Filled',
+                            data: data.map(d => d.filled),
+                            borderColor: '#48bb78',
+                            backgroundColor: 'rgba(72, 187, 120, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Still Open',
+                            data: data.map(d => d.still_open),
+                            borderColor: '#f56565',
+                            backgroundColor: 'rgba(245, 101, 101, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create Manager Chart
+        function createManagerChart(data) {
+            const ctx = document.getElementById('managerChart').getContext('2d');
+            if (charts.manager) charts.manager.destroy();
+
+            charts.manager = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.manager),
+                    datasets: [{
+                        label: 'Open Requisitions',
+                        data: data.map(d => d.count),
+                        backgroundColor: '#4facfe',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Create Critical Table
+        function createCriticalTable(data) {
+            const container = document.getElementById('criticalTable');
+
+            if (data.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #48bb78; padding: 20px;">No critical requisitions (90+ days)</p>';
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Requisition ID</th>
+                            <th>Job Title</th>
+                            <th>Department</th>
+                            <th>Location</th>
+                            <th>Start Date</th>
+                            <th>Days Open</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            data.forEach(row => {
+                const badgeClass = row.days_open > 180 ? 'critical' : row.days_open > 120 ? 'warning' : 'success';
+                html += `
+                    <tr>
+                        <td>${row.requisition}</td>
+                        <td>${row.job_title}</td>
+                        <td>${row.department}</td>
+                        <td>${row.location}</td>
+                        <td>${row.start_date}</td>
+                        <td><span class="badge ${badgeClass}">${row.days_open} days</span></td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Refresh data
+        async function refreshData() {
+            const btn = document.querySelector('.refresh-btn');
+            btn.disabled = true;
+            btn.textContent = '🔄 Refreshing...';
+
+            try {
+                await fetch(`${API_BASE}/refresh`);
+                await initDashboard();
+                btn.textContent = '✓ Refreshed!';
+                setTimeout(() => {
+                    btn.textContent = '🔄 Refresh Data';
+                    btn.disabled = false;
+                }, 2000);
+            } catch (error) {
+                btn.textContent = '✗ Failed';
+                setTimeout(() => {
+                    btn.textContent = '🔄 Refresh Data';
+                    btn.disabled = false;
+                }, 2000);
+            }
+        }
+
+        // Update last updated timestamp
+        function updateLastUpdated() {
+            const now = new Date();
+            const formatted = now.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            document.getElementById('lastUpdated').textContent = `Last updated: ${formatted}`;
+        }
+
+        // Show loading
+        function showLoading() {
+            document.getElementById('lastUpdated').textContent = 'Loading...';
+        }
+
+        // Show error
+        function showError(message) {
+            const container = document.querySelector('.container');
+            container.innerHTML = `<div class="error"><strong>Error:</strong> ${message}</div>` + container.innerHTML;
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initDashboard);
+
+        // Auto-refresh every 5 minutes
+        setInterval(initDashboard, 300000);
+    </script>
+</body>
+</html>
